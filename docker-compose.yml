@@ -1,0 +1,67 @@
+# Anexis Server Development Environment
+
+services:
+  # PostgreSQL Database
+  postgres:
+    image: postgres:16-alpine
+    container_name: anexis-postgres
+    environment:
+      POSTGRES_USER: ${DB_USER:-postgres}
+      POSTGRES_PASSWORD: ${DB_PASSWORD:-postgres}
+      POSTGRES_DB: ${DB_NAME:-anexis}
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${DB_USER:-postgres}"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    networks:
+      - anexis-network
+
+  # API Server
+  api:
+    build:
+      context: .
+      dockerfile: apps/api/Dockerfile
+    container_name: anexis-api
+    environment:
+      # Server
+      SERVER_HOST: 0.0.0.0
+      SERVER_PORT: 8080
+      ENVIRONMENT: development
+      DEBUG: "true"
+      
+      # Database
+      DB_HOST: postgres
+      DB_PORT: 5432
+      DB_USER: ${DB_USER:-postgres}
+      DB_PASSWORD: ${DB_PASSWORD:-postgres}
+      DB_NAME: ${DB_NAME:-anexis}
+      DB_SSLMODE: disable
+      
+      # JWT
+      JWT_SECRET: ${JWT_SECRET:-change-this-in-production}
+      JWT_EXPIRATION_HOURS: 24
+      
+      # Backblaze B2
+      B2_APPLICATION_KEY_ID: ${B2_APPLICATION_KEY_ID}
+      B2_APPLICATION_KEY: ${B2_APPLICATION_KEY}
+      B2_BUCKET_NAME: ${B2_BUCKET_NAME}
+    ports:
+      - "8080:8080"
+    depends_on:
+      postgres:
+        condition: service_healthy
+    networks:
+      - anexis-network
+    restart: unless-stopped
+
+volumes:
+  postgres_data:
+
+networks:
+  anexis-network:
+    driver: bridge

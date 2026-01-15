@@ -1,0 +1,1126 @@
+basePath: /api/v1
+definitions:
+  auth.ChangePasswordRequest:
+    properties:
+      new_password:
+        minLength: 8
+        type: string
+      old_password:
+        type: string
+    required:
+    - new_password
+    - old_password
+    type: object
+  auth.LoginRequest:
+    properties:
+      email:
+        type: string
+      password:
+        type: string
+    required:
+    - email
+    - password
+    type: object
+  auth.RefreshTokenRequest:
+    properties:
+      refresh_token:
+        type: string
+    required:
+    - refresh_token
+    type: object
+  auth.RegisterRequest:
+    properties:
+      email:
+        type: string
+      name:
+        maxLength: 100
+        minLength: 2
+        type: string
+      password:
+        minLength: 8
+        type: string
+    required:
+    - email
+    - name
+    - password
+    type: object
+  auth.TokenResponse:
+    properties:
+      access_token:
+        type: string
+      expires_in:
+        description: seconds
+        type: integer
+      refresh_token:
+        type: string
+      token_type:
+        type: string
+    type: object
+  auth.UserResponse:
+    properties:
+      created_at:
+        type: string
+      email:
+        type: string
+      id:
+        type: integer
+      name:
+        type: string
+      storage_quota:
+        type: integer
+      storage_used:
+        type: integer
+    type: object
+  backup.BackupResponse:
+    properties:
+      archive_key:
+        type: string
+      archive_size:
+        type: integer
+      completed_at:
+        type: string
+      created_at:
+        type: string
+      download_url:
+        type: string
+      expires_at:
+        type: string
+      id:
+        type: integer
+      last_error:
+        type: string
+      processed_files:
+        type: integer
+      progress:
+        type: number
+      started_at:
+        type: string
+      status:
+        type: string
+      total_files:
+        type: integer
+      type:
+        type: string
+    type: object
+  files.CreateFolderRequest:
+    properties:
+      name:
+        maxLength: 255
+        minLength: 1
+        type: string
+      parent_id:
+        type: integer
+    required:
+    - name
+    type: object
+  files.FileListResponse:
+    properties:
+      files:
+        items:
+          $ref: '#/definitions/files.FileResponse'
+        type: array
+      page:
+        type: integer
+      per_page:
+        type: integer
+      total_count:
+        type: integer
+    type: object
+  files.FileResponse:
+    properties:
+      description:
+        type: string
+      id:
+        type: integer
+      is_compressed:
+        type: boolean
+      is_encrypted:
+        type: boolean
+      mime_type:
+        type: string
+      name:
+        type: string
+      original_name:
+        type: string
+      parent_id:
+        type: integer
+      size:
+        type: integer
+      status:
+        type: string
+      tags:
+        type: string
+      uploaded_at:
+        type: string
+    type: object
+  files.MoveRequest:
+    properties:
+      target_parent_id:
+        type: integer
+    type: object
+  files.RenameRequest:
+    properties:
+      name:
+        maxLength: 255
+        minLength: 1
+        type: string
+    required:
+    - name
+    type: object
+  links.CreateLinkRequest:
+    properties:
+      access_type:
+        enum:
+        - public
+        - private
+        - restricted
+        type: string
+      description:
+        type: string
+      expires_in:
+        description: seconds until expiration
+        type: integer
+      file_id:
+        type: integer
+      max_downloads:
+        type: integer
+      name:
+        type: string
+      password:
+        type: string
+      type:
+        enum:
+        - download
+        - stream
+        - permanent
+        - temporal
+        type: string
+    required:
+    - file_id
+    - type
+    type: object
+  links.LinkResponse:
+    properties:
+      access_type:
+        type: string
+      created_at:
+        type: string
+      description:
+        type: string
+      download_count:
+        type: integer
+      expires_at:
+        type: string
+      file_id:
+        type: integer
+      file_name:
+        type: string
+      id:
+        type: integer
+      last_accessed_at:
+        type: string
+      max_downloads:
+        type: integer
+      name:
+        type: string
+      token:
+        type: string
+      type:
+        type: string
+      url:
+        type: string
+    type: object
+  links.UpdateLinkRequest:
+    properties:
+      description:
+        type: string
+      expires_in:
+        description: seconds to extend
+        type: integer
+      max_downloads:
+        type: integer
+      name:
+        type: string
+      password:
+        type: string
+    type: object
+  migration.MigrationResponse:
+    properties:
+      completed_at:
+        type: string
+      created_at:
+        type: string
+      failed_files:
+        type: integer
+      id:
+        type: integer
+      last_error:
+        type: string
+      processed_bytes:
+        type: integer
+      processed_files:
+        type: integer
+      progress:
+        type: number
+      provider:
+        type: string
+      started_at:
+        type: string
+      status:
+        type: string
+      total_bytes:
+        type: integer
+      total_files:
+        type: integer
+    type: object
+  migration.StartMigrationRequest:
+    properties:
+      access_token:
+        type: string
+      provider:
+        enum:
+        - google
+        - amazon
+        - microsoft
+        - dropbox
+        type: string
+      refresh_token:
+        type: string
+    required:
+    - access_token
+    - provider
+    type: object
+  response.ErrorInfo:
+    properties:
+      code:
+        type: string
+      details:
+        type: string
+      message:
+        type: string
+    type: object
+  response.Meta:
+    properties:
+      page:
+        type: integer
+      per_page:
+        type: integer
+      total:
+        type: integer
+      total_pages:
+        type: integer
+    type: object
+  response.Response:
+    properties:
+      data: {}
+      error:
+        $ref: '#/definitions/response.ErrorInfo'
+      meta:
+        $ref: '#/definitions/response.Meta'
+      success:
+        type: boolean
+    type: object
+host: localhost:8080
+info:
+  contact:
+    email: support@treefle-labs.com
+    name: API Support
+  description: Cloud file storage server with Backblaze B2 integration
+  license:
+    name: MIT
+    url: https://opensource.org/licenses/MIT
+  termsOfService: http://swagger.io/terms/
+  title: Anexis Cloud Storage API
+  version: "1.0"
+paths:
+  /api/v1/auth/login:
+    post:
+      consumes:
+      - application/json
+      description: Authenticate user and return tokens
+      parameters:
+      - description: Login credentials
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/auth.LoginRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            allOf:
+            - $ref: '#/definitions/response.Response'
+            - properties:
+                data:
+                  $ref: '#/definitions/auth.TokenResponse'
+              type: object
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/response.Response'
+      summary: User login
+      tags:
+      - auth
+  /api/v1/auth/me:
+    get:
+      description: Get authenticated user's profile
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            allOf:
+            - $ref: '#/definitions/response.Response'
+            - properties:
+                data:
+                  $ref: '#/definitions/auth.UserResponse'
+              type: object
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/response.Response'
+      security:
+      - BearerAuth: []
+      summary: Get current user
+      tags:
+      - auth
+  /api/v1/auth/password:
+    put:
+      consumes:
+      - application/json
+      description: Change authenticated user's password
+      parameters:
+      - description: Password change data
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/auth.ChangePasswordRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/response.Response'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/response.Response'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/response.Response'
+      security:
+      - BearerAuth: []
+      summary: Change password
+      tags:
+      - auth
+  /api/v1/auth/refresh:
+    post:
+      consumes:
+      - application/json
+      description: Get new access token using refresh token
+      parameters:
+      - description: Refresh token
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/auth.RefreshTokenRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            allOf:
+            - $ref: '#/definitions/response.Response'
+            - properties:
+                data:
+                  $ref: '#/definitions/auth.TokenResponse'
+              type: object
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/response.Response'
+      summary: Refresh access token
+      tags:
+      - auth
+  /api/v1/auth/register:
+    post:
+      consumes:
+      - application/json
+      description: Create a new user account
+      parameters:
+      - description: Registration data
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/auth.RegisterRequest'
+      produces:
+      - application/json
+      responses:
+        "201":
+          description: Created
+          schema:
+            allOf:
+            - $ref: '#/definitions/response.Response'
+            - properties:
+                data:
+                  $ref: '#/definitions/auth.UserResponse'
+              type: object
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/response.Response'
+        "422":
+          description: Unprocessable Entity
+          schema:
+            $ref: '#/definitions/response.Response'
+      summary: Register a new user
+      tags:
+      - auth
+  /api/v1/backup:
+    get:
+      description: List user's backup jobs
+      parameters:
+      - description: Filter by type (export/import)
+        in: query
+        name: type
+        type: string
+      - description: Filter by status
+        in: query
+        name: status
+        type: string
+      - default: 1
+        description: Page number
+        in: query
+        name: page
+        type: integer
+      - default: 20
+        description: Items per page
+        in: query
+        name: per_page
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/response.Response'
+      security:
+      - BearerAuth: []
+      summary: List backup jobs
+      tags:
+      - backup
+  /api/v1/backup/{id}:
+    get:
+      description: Get details of a backup job
+      parameters:
+      - description: Job ID
+        in: path
+        name: id
+        required: true
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            allOf:
+            - $ref: '#/definitions/response.Response'
+            - properties:
+                data:
+                  $ref: '#/definitions/backup.BackupResponse'
+              type: object
+      security:
+      - BearerAuth: []
+      summary: Get backup job
+      tags:
+      - backup
+  /api/v1/backup/{id}/download:
+    get:
+      description: Get download URL for a completed backup
+      parameters:
+      - description: Job ID
+        in: path
+        name: id
+        required: true
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/response.Response'
+      security:
+      - BearerAuth: []
+      summary: Download backup
+      tags:
+      - backup
+  /api/v1/backup/export:
+    post:
+      description: Start exporting all user data to a backup archive
+      produces:
+      - application/json
+      responses:
+        "201":
+          description: Created
+          schema:
+            allOf:
+            - $ref: '#/definitions/response.Response'
+            - properties:
+                data:
+                  $ref: '#/definitions/backup.BackupResponse'
+              type: object
+      security:
+      - BearerAuth: []
+      summary: Start backup export
+      tags:
+      - backup
+  /api/v1/files:
+    get:
+      description: List user's files with optional filtering
+      parameters:
+      - description: Parent folder ID
+        in: query
+        name: parent_id
+        type: integer
+      - description: Search query
+        in: query
+        name: search
+        type: string
+      - default: 1
+        description: Page number
+        in: query
+        name: page
+        type: integer
+      - default: 20
+        description: Items per page
+        in: query
+        name: per_page
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            allOf:
+            - $ref: '#/definitions/response.Response'
+            - properties:
+                data:
+                  $ref: '#/definitions/files.FileListResponse'
+              type: object
+      security:
+      - BearerAuth: []
+      summary: List files
+      tags:
+      - files
+  /api/v1/files/{id}:
+    delete:
+      description: Delete a file or folder
+      parameters:
+      - description: File ID
+        in: path
+        name: id
+        required: true
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "204":
+          description: No Content
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/response.Response'
+      security:
+      - BearerAuth: []
+      summary: Delete file/folder
+      tags:
+      - files
+    get:
+      description: Get metadata for a file
+      parameters:
+      - description: File ID
+        in: path
+        name: id
+        required: true
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            allOf:
+            - $ref: '#/definitions/response.Response'
+            - properties:
+                data:
+                  $ref: '#/definitions/files.FileResponse'
+              type: object
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/response.Response'
+      security:
+      - BearerAuth: []
+      summary: Get file details
+      tags:
+      - files
+  /api/v1/files/{id}/download:
+    get:
+      description: Download a file from storage
+      parameters:
+      - description: File ID
+        in: path
+        name: id
+        required: true
+        type: integer
+      produces:
+      - application/octet-stream
+      responses:
+        "200":
+          description: OK
+          schema:
+            type: file
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/response.Response'
+      security:
+      - BearerAuth: []
+      summary: Download a file
+      tags:
+      - files
+  /api/v1/files/{id}/move:
+    put:
+      consumes:
+      - application/json
+      description: Move a file or folder to another location
+      parameters:
+      - description: File ID
+        in: path
+        name: id
+        required: true
+        type: integer
+      - description: Target location
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/files.MoveRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            allOf:
+            - $ref: '#/definitions/response.Response'
+            - properties:
+                data:
+                  $ref: '#/definitions/files.FileResponse'
+              type: object
+      security:
+      - BearerAuth: []
+      summary: Move file/folder
+      tags:
+      - files
+  /api/v1/files/{id}/rename:
+    put:
+      consumes:
+      - application/json
+      description: Rename a file or folder
+      parameters:
+      - description: File ID
+        in: path
+        name: id
+        required: true
+        type: integer
+      - description: New name
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/files.RenameRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            allOf:
+            - $ref: '#/definitions/response.Response'
+            - properties:
+                data:
+                  $ref: '#/definitions/files.FileResponse'
+              type: object
+      security:
+      - BearerAuth: []
+      summary: Rename file/folder
+      tags:
+      - files
+  /api/v1/files/folder:
+    post:
+      consumes:
+      - application/json
+      description: Create a new folder
+      parameters:
+      - description: Folder details
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/files.CreateFolderRequest'
+      produces:
+      - application/json
+      responses:
+        "201":
+          description: Created
+          schema:
+            allOf:
+            - $ref: '#/definitions/response.Response'
+            - properties:
+                data:
+                  $ref: '#/definitions/files.FileResponse'
+              type: object
+      security:
+      - BearerAuth: []
+      summary: Create folder
+      tags:
+      - files
+  /api/v1/files/upload:
+    post:
+      consumes:
+      - multipart/form-data
+      description: Upload a file to storage
+      parameters:
+      - description: File to upload
+        in: formData
+        name: file
+        required: true
+        type: file
+      - description: Parent folder ID
+        in: formData
+        name: parent_id
+        type: integer
+      - description: File description
+        in: formData
+        name: description
+        type: string
+      - description: Comma-separated tags
+        in: formData
+        name: tags
+        type: string
+      - description: Compress file
+        in: formData
+        name: compress
+        type: boolean
+      produces:
+      - application/json
+      responses:
+        "201":
+          description: Created
+          schema:
+            allOf:
+            - $ref: '#/definitions/response.Response'
+            - properties:
+                data:
+                  $ref: '#/definitions/files.FileResponse'
+              type: object
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/response.Response'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/response.Response'
+      security:
+      - BearerAuth: []
+      summary: Upload a file
+      tags:
+      - files
+  /api/v1/links:
+    get:
+      description: List user's access links
+      parameters:
+      - description: Filter by file ID
+        in: query
+        name: file_id
+        type: integer
+      - description: Filter by link type
+        in: query
+        name: type
+        type: string
+      - default: 1
+        description: Page number
+        in: query
+        name: page
+        type: integer
+      - default: 20
+        description: Items per page
+        in: query
+        name: per_page
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/response.Response'
+      security:
+      - BearerAuth: []
+      summary: List links
+      tags:
+      - links
+    post:
+      consumes:
+      - application/json
+      description: Create a new access link for a file
+      parameters:
+      - description: Link details
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/links.CreateLinkRequest'
+      produces:
+      - application/json
+      responses:
+        "201":
+          description: Created
+          schema:
+            allOf:
+            - $ref: '#/definitions/response.Response'
+            - properties:
+                data:
+                  $ref: '#/definitions/links.LinkResponse'
+              type: object
+      security:
+      - BearerAuth: []
+      summary: Create access link
+      tags:
+      - links
+  /api/v1/links/{id}:
+    delete:
+      description: Delete an access link
+      parameters:
+      - description: Link ID
+        in: path
+        name: id
+        required: true
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "204":
+          description: No Content
+      security:
+      - BearerAuth: []
+      summary: Delete link
+      tags:
+      - links
+    put:
+      consumes:
+      - application/json
+      description: Update an access link
+      parameters:
+      - description: Link ID
+        in: path
+        name: id
+        required: true
+        type: integer
+      - description: Updated link details
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/links.UpdateLinkRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            allOf:
+            - $ref: '#/definitions/response.Response'
+            - properties:
+                data:
+                  $ref: '#/definitions/links.LinkResponse'
+              type: object
+      security:
+      - BearerAuth: []
+      summary: Update link
+      tags:
+      - links
+  /api/v1/links/{token}/access:
+    get:
+      description: Download a file using an access link
+      parameters:
+      - description: Link token
+        in: path
+        name: token
+        required: true
+        type: string
+      - description: Password (if protected)
+        in: query
+        name: password
+        type: string
+      produces:
+      - application/octet-stream
+      responses:
+        "200":
+          description: OK
+          schema:
+            type: file
+      summary: Access file via link
+      tags:
+      - links
+  /api/v1/links/{token}/stream:
+    get:
+      description: Get a streaming URL for a file
+      parameters:
+      - description: Link token
+        in: path
+        name: token
+        required: true
+        type: string
+      - description: Password (if protected)
+        in: query
+        name: password
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/response.Response'
+      summary: Get streaming URL
+      tags:
+      - links
+  /api/v1/migration:
+    get:
+      description: List user's migration jobs
+      parameters:
+      - description: Filter by status
+        in: query
+        name: status
+        type: string
+      - default: 1
+        description: Page number
+        in: query
+        name: page
+        type: integer
+      - default: 20
+        description: Items per page
+        in: query
+        name: per_page
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/response.Response'
+      security:
+      - BearerAuth: []
+      summary: List migration jobs
+      tags:
+      - migration
+    post:
+      consumes:
+      - application/json
+      description: Start a new migration job from external provider
+      parameters:
+      - description: Migration details
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/migration.StartMigrationRequest'
+      produces:
+      - application/json
+      responses:
+        "201":
+          description: Created
+          schema:
+            allOf:
+            - $ref: '#/definitions/response.Response'
+            - properties:
+                data:
+                  $ref: '#/definitions/migration.MigrationResponse'
+              type: object
+      security:
+      - BearerAuth: []
+      summary: Start migration
+      tags:
+      - migration
+  /api/v1/migration/{id}:
+    get:
+      description: Get details of a migration job
+      parameters:
+      - description: Job ID
+        in: path
+        name: id
+        required: true
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            allOf:
+            - $ref: '#/definitions/response.Response'
+            - properties:
+                data:
+                  $ref: '#/definitions/migration.MigrationResponse'
+              type: object
+      security:
+      - BearerAuth: []
+      summary: Get migration job
+      tags:
+      - migration
+  /api/v1/migration/{id}/cancel:
+    post:
+      description: Cancel a running migration job
+      parameters:
+      - description: Job ID
+        in: path
+        name: id
+        required: true
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/response.Response'
+      security:
+      - BearerAuth: []
+      summary: Cancel migration
+      tags:
+      - migration
+securityDefinitions:
+  BearerAuth:
+    description: 'Enter your bearer token in the format: Bearer {token}'
+    in: header
+    name: Authorization
+    type: apiKey
+swagger: "2.0"
