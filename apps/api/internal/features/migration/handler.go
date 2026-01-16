@@ -2,11 +2,11 @@ package migration
 
 import (
 	"errors"
-	"strconv"
 
 	"github.com/Treefle-labs/anexis-server/apps/api/internal/infrastructure/http/middleware"
 	"github.com/Treefle-labs/anexis-server/apps/api/internal/infrastructure/http/response"
 	"github.com/gin-gonic/gin"
+	"github.com/google/uuid"
 )
 
 // Handler handles migration HTTP requests
@@ -61,7 +61,7 @@ func (h *Handler) Start(c *gin.Context) {
 // @Tags migration
 // @Produce json
 // @Security BearerAuth
-// @Param id path int true "Job ID"
+// @Param id path string true "Job ID"
 // @Success 200 {object} response.Response{data=MigrationResponse}
 // @Router /api/v1/migration/{id} [get]
 func (h *Handler) Get(c *gin.Context) {
@@ -71,13 +71,13 @@ func (h *Handler) Get(c *gin.Context) {
 		return
 	}
 
-	jobID, _ := strconv.ParseUint(c.Param("id"), 10, 32)
-	if jobID == 0 {
+	jobID, err := uuid.Parse(c.Param("id"))
+	if err != nil {
 		response.BadRequest(c, "INVALID_ID", "Invalid job ID")
 		return
 	}
 
-	job, err := h.service.GetJob(userID, uint(jobID))
+	job, err := h.service.GetJob(userID, jobID)
 	if err != nil {
 		if errors.Is(err, ErrJobNotFound) {
 			response.NotFound(c, "Migration job not found")
@@ -138,7 +138,7 @@ func (h *Handler) List(c *gin.Context) {
 // @Tags migration
 // @Produce json
 // @Security BearerAuth
-// @Param id path int true "Job ID"
+// @Param id path string true "Job ID"
 // @Success 200 {object} response.Response
 // @Router /api/v1/migration/{id}/cancel [post]
 func (h *Handler) Cancel(c *gin.Context) {
@@ -148,13 +148,13 @@ func (h *Handler) Cancel(c *gin.Context) {
 		return
 	}
 
-	jobID, _ := strconv.ParseUint(c.Param("id"), 10, 32)
-	if jobID == 0 {
+	jobID, err := uuid.Parse(c.Param("id"))
+	if err != nil {
 		response.BadRequest(c, "INVALID_ID", "Invalid job ID")
 		return
 	}
 
-	err := h.service.Cancel(userID, uint(jobID))
+	err = h.service.Cancel(userID, jobID)
 	if err != nil {
 		if errors.Is(err, ErrJobNotFound) {
 			response.NotFound(c, "Migration job not found")

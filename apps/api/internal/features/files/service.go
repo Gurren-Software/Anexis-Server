@@ -10,7 +10,6 @@ import (
 	"fmt"
 	"io"
 	"mime/multipart"
-	"path/filepath"
 	"time"
 
 	"github.com/Treefle-labs/anexis-server/apps/api/internal/infrastructure/storage"
@@ -19,22 +18,21 @@ import (
 )
 
 var (
-	ErrFileNotFound         = errors.New("file not found")
-	ErrAccessDenied         = errors.New("access denied")
-	ErrStorageQuotaExceeded = errors.New("storage quota exceeded")
-	ErrInvalidFile          = errors.New("invalid file")
+	ErrFileNotFound    = errors.New("file not found")
+	ErrStorageExceeded = errors.New("storage quota exceeded")
 )
+
+// AuthRepository interface for auth operations
+type AuthRepository interface {
+	UpdateStorageUsed(userID uuid.UUID, delta int64) error
+	GetStorageUsed(userID uuid.UUID) (int64, error)
+}
 
 // Service handles file business logic
 type Service struct {
 	repo     *Repository
 	storage  storage.Provider
 	authRepo AuthRepository
-}
-
-// AuthRepository interface for user operations
-type AuthRepository interface {
-	UpdateStorageUsed(userID uint, delta int64) error
 }
 
 // NewService creates a new files service
@@ -46,98 +44,93 @@ func NewService(repo *Repository, storage storage.Provider, authRepo AuthReposit
 	}
 }
 
-// Upload handles file upload
-func (s *Service) Upload(ctx context.Context, userID uint, storageQuota, storageUsed int64, file *multipart.FileHeader, opts *UploadRequest) (*models.File, error) {
+// Upload uploads a file
+func (s *Service) Upload(ctx context.Context, userID uuid.UUID, file *multipart.FileHeader, compress bool, parentID *uuid.UUID, description string, storageQuota int64) (*models.File, error) {
 	// Check storage quota
-	if storageUsed+file.Size > storageQuota {
-		return nil, ErrStorageQuotaExceeded
+	currentUsed, err := s.authRepo.GetStorageUsed(userID)
+	if err != nil {
+		return nil, err
+	}
+	if currentUsed+file.Size > storageQuota {
+		return nil, ErrStorageExceeded
 	}
 
 	// Open file
 	src, err := file.Open()
 	if err != nil {
-		return nil, fmt.Errorf("failed to open file: %w", err)
+		return nil, err
 	}
 	defer src.Close()
 
-	// Read file contents
-	contents, err := io.ReadAll(src)
+	// Read file content
+	content, err := io.ReadAll(src)
 	if err != nil {
-		return nil, fmt.Errorf("failed to read file: %w", err)
+		return nil, err
 	}
 
 	// Calculate checksum
-	hash := sha256.Sum256(contents)
+	hash := sha256.Sum256(content)
 	checksum := hex.EncodeToString(hash[:])
 
-	// Process file (compress if requested)
-	var processedData []byte
+	// Compress if requested
+	var fileContent []byte
 	isCompressed := false
-	if opts.Compress {
+	if compress {
 		var buf bytes.Buffer
 		gzWriter := gzip.NewWriter(&buf)
-		if _, err := gzWriter.Write(contents); err != nil {
-			return nil, fmt.Errorf("failed to compress: %w", err)
+		if _, err := gzWriter.Write(content); err != nil {
+			return nil, err
 		}
-		gzWriter.Close()
-		processedData = buf.Bytes()
+		if err := gzWriter.Close(); err != nil {
+			return nil, err
+		}
+		fileContent = buf.Bytes()
 		isCompressed = true
 	} else {
-		processedData = contents
+		fileContent = content
 	}
 
 	// Generate storage key
-	ext := filepath.Ext(file.Filename)
-	storageKey := fmt.Sprintf("%d/%s%s", userID, uuid.New().String(), ext)
-	storagePath := fmt.Sprintf("files/%s", storageKey)
+	storageKey := fmt.Sprintf("files/%s/%s/%s", userID.String(), time.Now().Format("2006/01/02"), uuid.New().String())
 
 	// Upload to storage
-	contentType := file.Header.Get("Content-Type")
-	if contentType == "" {
-		contentType = "application/octet-stream"
+	if err := s.storage.Upload(ctx, storageKey, bytes.NewReader(fileContent), int64(len(fileContent)), file.Header.Get("Content-Type")); err != nil {
+		return nil, err
 	}
 
-	err = s.storage.Upload(ctx, storagePath, bytes.NewReader(processedData), int64(len(processedData)), contentType)
-	if err != nil {
-		return nil, fmt.Errorf("failed to upload to storage: %w", err)
-	}
-
-	// Create database record
+	// Create file record
+	now := time.Now()
 	fileRecord := &models.File{
 		UserID:       userID,
 		Name:         file.Filename,
 		OriginalName: file.Filename,
-		MimeType:     contentType,
+		MimeType:     file.Header.Get("Content-Type"),
 		Size:         file.Size,
 		StorageKey:   storageKey,
-		StoragePath:  storagePath,
+		StoragePath:  storageKey,
 		Checksum:     checksum,
 		Status:       models.FileStatusReady,
-		IsEncrypted:  opts.Encrypt,
 		IsCompressed: isCompressed,
-		ParentID:     opts.ParentID,
-		Description:  opts.Description,
-		Tags:         opts.Tags,
-		UploadedAt:   time.Now(),
+		ParentID:     parentID,
+		Description:  description,
+		UploadedAt:   &now,
+		ProcessedAt:  &now,
 	}
 
 	if err := s.repo.Create(fileRecord); err != nil {
-		// Try to clean up storage
-		_ = s.storage.Delete(ctx, storagePath)
-		return nil, fmt.Errorf("failed to save file record: %w", err)
+		return nil, err
 	}
 
-	// Update user storage used
+	// Update storage used
 	if err := s.authRepo.UpdateStorageUsed(userID, file.Size); err != nil {
-		// Log but don't fail
-		fmt.Printf("Warning: failed to update storage usage: %v\n", err)
+		return nil, err
 	}
 
 	return fileRecord, nil
 }
 
-// Download retrieves a file for download
-func (s *Service) Download(ctx context.Context, userID, fileID uint) (io.ReadCloser, *models.File, error) {
+// Download downloads a file
+func (s *Service) Download(ctx context.Context, userID, fileID uuid.UUID) (io.ReadCloser, *models.File, error) {
 	file, err := s.repo.FindByIDAndUser(fileID, userID)
 	if err != nil {
 		return nil, nil, err
@@ -148,24 +141,40 @@ func (s *Service) Download(ctx context.Context, userID, fileID uint) (io.ReadClo
 
 	reader, err := s.storage.Download(ctx, file.StoragePath)
 	if err != nil {
-		return nil, nil, fmt.Errorf("failed to download from storage: %w", err)
+		return nil, nil, err
 	}
 
-	// If compressed, decompress
+	// If file was compressed, decompress it
 	if file.IsCompressed {
 		gzReader, err := gzip.NewReader(reader)
 		if err != nil {
 			reader.Close()
-			return nil, nil, fmt.Errorf("failed to decompress: %w", err)
+			return nil, nil, err
 		}
-		return gzReader, file, nil
+		// Wrap to close both readers
+		return &decompressReader{gzReader: gzReader, underlying: reader}, file, nil
 	}
 
 	return reader, file, nil
 }
 
-// GetFile retrieves file metadata
-func (s *Service) GetFile(userID, fileID uint) (*models.File, error) {
+// decompressReader wraps gzip reader to close underlying reader too
+type decompressReader struct {
+	gzReader   *gzip.Reader
+	underlying io.ReadCloser
+}
+
+func (d *decompressReader) Read(p []byte) (n int, err error) {
+	return d.gzReader.Read(p)
+}
+
+func (d *decompressReader) Close() error {
+	d.gzReader.Close()
+	return d.underlying.Close()
+}
+
+// GetFile gets file metadata
+func (s *Service) GetFile(userID, fileID uuid.UUID) (*models.File, error) {
 	file, err := s.repo.FindByIDAndUser(fileID, userID)
 	if err != nil {
 		return nil, err
@@ -176,8 +185,8 @@ func (s *Service) GetFile(userID, fileID uint) (*models.File, error) {
 	return file, nil
 }
 
-// ListFiles lists user's files
-func (s *Service) ListFiles(userID uint, req *ListFilesRequest) ([]models.File, int64, error) {
+// ListFiles lists files
+func (s *Service) ListFiles(userID uuid.UUID, req *ListFilesRequest) ([]models.File, int64, error) {
 	page := req.Page
 	if page < 1 {
 		page = 1
@@ -186,27 +195,23 @@ func (s *Service) ListFiles(userID uint, req *ListFilesRequest) ([]models.File, 
 	if perPage < 1 {
 		perPage = 20
 	}
-	if perPage > 100 {
-		perPage = 100
-	}
 
 	return s.repo.List(userID, req.ParentID, req.Search, page, perPage)
 }
 
-// CreateFolder creates a new folder
-func (s *Service) CreateFolder(userID uint, req *CreateFolderRequest) (*models.File, error) {
+// CreateFolder creates a folder
+func (s *Service) CreateFolder(userID uuid.UUID, req *CreateFolderRequest) (*models.File, error) {
 	folder := &models.File{
 		UserID:       userID,
 		Name:         req.Name,
 		OriginalName: req.Name,
 		MimeType:     "application/x-directory",
 		Size:         0,
-		StorageKey:   fmt.Sprintf("%d/folder-%s", userID, uuid.New().String()),
+		StorageKey:   fmt.Sprintf("folders/%s/%s", userID.String(), uuid.New().String()),
 		StoragePath:  "",
 		Checksum:     "",
 		Status:       models.FileStatusReady,
 		ParentID:     req.ParentID,
-		UploadedAt:   time.Now(),
 	}
 
 	if err := s.repo.Create(folder); err != nil {
@@ -217,7 +222,7 @@ func (s *Service) CreateFolder(userID uint, req *CreateFolderRequest) (*models.F
 }
 
 // Rename renames a file or folder
-func (s *Service) Rename(userID, fileID uint, req *RenameRequest) (*models.File, error) {
+func (s *Service) Rename(userID, fileID uuid.UUID, newName string) (*models.File, error) {
 	file, err := s.repo.FindByIDAndUser(fileID, userID)
 	if err != nil {
 		return nil, err
@@ -226,7 +231,7 @@ func (s *Service) Rename(userID, fileID uint, req *RenameRequest) (*models.File,
 		return nil, ErrFileNotFound
 	}
 
-	file.Name = req.Name
+	file.Name = newName
 	if err := s.repo.Update(file); err != nil {
 		return nil, err
 	}
@@ -234,8 +239,8 @@ func (s *Service) Rename(userID, fileID uint, req *RenameRequest) (*models.File,
 	return file, nil
 }
 
-// Move moves a file to a different folder
-func (s *Service) Move(userID, fileID uint, req *MoveRequest) (*models.File, error) {
+// Move moves a file or folder
+func (s *Service) Move(userID, fileID uuid.UUID, newParentID *uuid.UUID) (*models.File, error) {
 	file, err := s.repo.FindByIDAndUser(fileID, userID)
 	if err != nil {
 		return nil, err
@@ -244,18 +249,7 @@ func (s *Service) Move(userID, fileID uint, req *MoveRequest) (*models.File, err
 		return nil, ErrFileNotFound
 	}
 
-	// Validate target folder exists (if specified)
-	if req.TargetParentID != nil {
-		targetFolder, err := s.repo.FindByIDAndUser(*req.TargetParentID, userID)
-		if err != nil {
-			return nil, err
-		}
-		if targetFolder == nil || !targetFolder.IsFolder() {
-			return nil, errors.New("invalid target folder")
-		}
-	}
-
-	file.ParentID = req.TargetParentID
+	file.ParentID = newParentID
 	if err := s.repo.Update(file); err != nil {
 		return nil, err
 	}
@@ -264,7 +258,7 @@ func (s *Service) Move(userID, fileID uint, req *MoveRequest) (*models.File, err
 }
 
 // Delete deletes a file
-func (s *Service) Delete(ctx context.Context, userID, fileID uint) error {
+func (s *Service) Delete(ctx context.Context, userID, fileID uuid.UUID) error {
 	file, err := s.repo.FindByIDAndUser(fileID, userID)
 	if err != nil {
 		return err
@@ -273,38 +267,35 @@ func (s *Service) Delete(ctx context.Context, userID, fileID uint) error {
 		return ErrFileNotFound
 	}
 
-	// Delete from storage (if not a folder)
-	if !file.IsFolder() && file.StoragePath != "" {
-		if err := s.storage.Delete(ctx, file.StoragePath); err != nil {
-			// Log but continue with deletion
-			fmt.Printf("Warning: failed to delete from storage: %v\n", err)
-		}
-	}
-
-	// Update user storage
+	// Delete from storage if not a folder
 	if !file.IsFolder() {
+		if err := s.storage.Delete(ctx, file.StoragePath); err != nil {
+			return err
+		}
+
+		// Update storage used
 		if err := s.authRepo.UpdateStorageUsed(userID, -file.Size); err != nil {
-			fmt.Printf("Warning: failed to update storage usage: %v\n", err)
+			return err
 		}
 	}
 
 	return s.repo.Delete(fileID)
 }
 
-// ToFileResponse converts file model to response DTO
-func ToFileResponse(file *models.File) *FileResponse {
+// ToFileResponse converts file model to response
+func (s *Service) ToFileResponse(file *models.File) *FileResponse {
 	return &FileResponse{
 		ID:           file.ID,
 		Name:         file.Name,
 		OriginalName: file.OriginalName,
 		MimeType:     file.MimeType,
 		Size:         file.Size,
-		Status:       string(file.Status),
+		IsFolder:     file.IsFolder(),
+		ParentID:     file.ParentID,
+		Description:  file.Description,
 		IsEncrypted:  file.IsEncrypted,
 		IsCompressed: file.IsCompressed,
-		Description:  file.Description,
-		Tags:         file.Tags,
-		UploadedAt:   file.UploadedAt.Format(time.RFC3339),
-		ParentID:     file.ParentID,
+		CreatedAt:    file.CreatedAt.Format(time.RFC3339),
+		UpdatedAt:    file.UpdatedAt.Format(time.RFC3339),
 	}
 }

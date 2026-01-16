@@ -1,6 +1,7 @@
 package links
 
 import (
+	"compress/gzip"
 	"context"
 	"crypto/rand"
 	"encoding/base64"
@@ -11,6 +12,7 @@ import (
 
 	"github.com/Treefle-labs/anexis-server/apps/api/internal/infrastructure/storage"
 	"github.com/Treefle-labs/anexis-server/packages/database/models"
+	"github.com/google/uuid"
 	"golang.org/x/crypto/bcrypt"
 )
 
@@ -24,8 +26,8 @@ var (
 
 // FileRepository interface for file operations
 type FileRepository interface {
-	FindByIDAndUser(id, userID uint) (*models.File, error)
-	FindByID(id uint) (*models.File, error)
+	FindByIDAndUser(id, userID uuid.UUID) (*models.File, error)
+	FindByID(id uuid.UUID) (*models.File, error)
 }
 
 // Service handles link business logic
@@ -47,7 +49,7 @@ func NewService(repo *Repository, fileRepo FileRepository, storage storage.Provi
 }
 
 // Create creates a new access link
-func (s *Service) Create(userID uint, req *CreateLinkRequest) (*models.Link, error) {
+func (s *Service) Create(userID uuid.UUID, req *CreateLinkRequest) (*models.Link, error) {
 	// Verify file ownership
 	file, err := s.fileRepo.FindByIDAndUser(req.FileID, userID)
 	if err != nil {
@@ -156,10 +158,36 @@ func (s *Service) AccessFile(ctx context.Context, token string, password string)
 		return nil, nil, err
 	}
 
+	// If file was compressed, decompress it
+	if file.IsCompressed {
+		gzReader, err := gzip.NewReader(reader)
+		if err != nil {
+			reader.Close()
+			return nil, nil, err
+		}
+		// Wrap to close both readers
+		reader = &decompressReader{gzReader: gzReader, underlying: reader}
+	}
+
 	// Increment download count
 	_ = s.repo.IncrementDownloadCount(link.ID)
 
 	return reader, link, nil
+}
+
+// decompressReader wraps gzip reader to close underlying reader too
+type decompressReader struct {
+	gzReader   *gzip.Reader
+	underlying io.ReadCloser
+}
+
+func (d *decompressReader) Read(p []byte) (n int, err error) {
+	return d.gzReader.Read(p)
+}
+
+func (d *decompressReader) Close() error {
+	d.gzReader.Close()
+	return d.underlying.Close()
 }
 
 // GetStreamURL returns a streaming URL for the file
@@ -183,7 +211,7 @@ func (s *Service) GetStreamURL(ctx context.Context, token string, password strin
 }
 
 // List lists user's links
-func (s *Service) List(userID uint, req *ListLinksRequest) ([]models.Link, int64, error) {
+func (s *Service) List(userID uuid.UUID, req *ListLinksRequest) ([]models.Link, int64, error) {
 	page := req.Page
 	if page < 1 {
 		page = 1
@@ -197,7 +225,7 @@ func (s *Service) List(userID uint, req *ListLinksRequest) ([]models.Link, int64
 }
 
 // Update updates a link
-func (s *Service) Update(userID, linkID uint, req *UpdateLinkRequest) (*models.Link, error) {
+func (s *Service) Update(userID, linkID uuid.UUID, req *UpdateLinkRequest) (*models.Link, error) {
 	link, err := s.repo.FindByIDAndUser(linkID, userID)
 	if err != nil {
 		return nil, err
@@ -240,7 +268,7 @@ func (s *Service) Update(userID, linkID uint, req *UpdateLinkRequest) (*models.L
 }
 
 // Delete deletes a link
-func (s *Service) Delete(userID, linkID uint) error {
+func (s *Service) Delete(userID, linkID uuid.UUID) error {
 	link, err := s.repo.FindByIDAndUser(linkID, userID)
 	if err != nil {
 		return err
@@ -270,7 +298,7 @@ func (s *Service) ToLinkResponse(link *models.Link) *LinkResponse {
 		CreatedAt:      link.CreatedAt.Format(time.RFC3339),
 	}
 
-	if link.File.ID != 0 {
+	if link.File.ID != uuid.Nil {
 		resp.FileName = link.File.OriginalName
 	}
 

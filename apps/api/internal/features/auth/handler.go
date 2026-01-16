@@ -2,14 +2,13 @@ package auth
 
 import (
 	"errors"
-	"net/http"
 
 	"github.com/Treefle-labs/anexis-server/apps/api/internal/infrastructure/http/middleware"
 	"github.com/Treefle-labs/anexis-server/apps/api/internal/infrastructure/http/response"
 	"github.com/gin-gonic/gin"
 )
 
-// Handler handles authentication HTTP requests
+// Handler handles auth HTTP requests
 type Handler struct {
 	service *Service
 }
@@ -20,30 +19,28 @@ func NewHandler(service *Service) *Handler {
 }
 
 // Register godoc
-// @Summary Register a new user
-// @Description Create a new user account
+// @Summary Register new user
+// @Description Register a new user account
 // @Tags auth
 // @Accept json
 // @Produce json
-// @Param request body RegisterRequest true "Registration data"
+// @Param request body RegisterRequest true "Registration details"
 // @Success 201 {object} response.Response{data=UserResponse}
-// @Failure 400 {object} response.Response
-// @Failure 422 {object} response.Response
 // @Router /api/v1/auth/register [post]
 func (h *Handler) Register(c *gin.Context) {
 	var req RegisterRequest
 	if err := c.ShouldBindJSON(&req); err != nil {
-		response.ValidationError(c, "Invalid request data", err.Error())
+		response.ValidationError(c, "Invalid request", err.Error())
 		return
 	}
 
 	user, err := h.service.Register(&req)
 	if err != nil {
-		if errors.Is(err, ErrEmailAlreadyExists) {
-			response.BadRequest(c, "EMAIL_EXISTS", "Email is already registered")
+		if errors.Is(err, ErrUserExists) {
+			response.BadRequest(c, "USER_EXISTS", "User already exists")
 			return
 		}
-		response.InternalError(c, "Failed to create account")
+		response.InternalError(c, "Failed to register user")
 		return
 	}
 
@@ -51,29 +48,28 @@ func (h *Handler) Register(c *gin.Context) {
 }
 
 // Login godoc
-// @Summary User login
-// @Description Authenticate user and return tokens
+// @Summary Login user
+// @Description Authenticate user and get tokens
 // @Tags auth
 // @Accept json
 // @Produce json
 // @Param request body LoginRequest true "Login credentials"
 // @Success 200 {object} response.Response{data=TokenResponse}
-// @Failure 401 {object} response.Response
 // @Router /api/v1/auth/login [post]
 func (h *Handler) Login(c *gin.Context) {
 	var req LoginRequest
 	if err := c.ShouldBindJSON(&req); err != nil {
-		response.ValidationError(c, "Invalid request data", err.Error())
+		response.ValidationError(c, "Invalid request", err.Error())
 		return
 	}
 
 	tokens, err := h.service.Login(&req)
 	if err != nil {
 		if errors.Is(err, ErrInvalidCredentials) {
-			response.Unauthorized(c, "Invalid email or password")
+			response.Unauthorized(c, "Invalid credentials")
 			return
 		}
-		response.InternalError(c, "Authentication failed")
+		response.InternalError(c, "Failed to login")
 		return
 	}
 
@@ -81,54 +77,48 @@ func (h *Handler) Login(c *gin.Context) {
 }
 
 // RefreshToken godoc
-// @Summary Refresh access token
+// @Summary Refresh token
 // @Description Get new access token using refresh token
 // @Tags auth
 // @Accept json
 // @Produce json
 // @Param request body RefreshTokenRequest true "Refresh token"
 // @Success 200 {object} response.Response{data=TokenResponse}
-// @Failure 401 {object} response.Response
 // @Router /api/v1/auth/refresh [post]
 func (h *Handler) RefreshToken(c *gin.Context) {
 	var req RefreshTokenRequest
 	if err := c.ShouldBindJSON(&req); err != nil {
-		response.ValidationError(c, "Invalid request data", err.Error())
+		response.ValidationError(c, "Invalid request", err.Error())
 		return
 	}
 
 	tokens, err := h.service.RefreshToken(req.RefreshToken)
 	if err != nil {
-		response.Unauthorized(c, "Invalid or expired refresh token")
+		response.Unauthorized(c, "Invalid refresh token")
 		return
 	}
 
 	response.OK(c, tokens)
 }
 
-// GetCurrentUser godoc
+// Me godoc
 // @Summary Get current user
-// @Description Get authenticated user's profile
+// @Description Get current authenticated user profile
 // @Tags auth
 // @Produce json
 // @Security BearerAuth
 // @Success 200 {object} response.Response{data=UserResponse}
-// @Failure 401 {object} response.Response
 // @Router /api/v1/auth/me [get]
-func (h *Handler) GetCurrentUser(c *gin.Context) {
+func (h *Handler) Me(c *gin.Context) {
 	userID, ok := middleware.GetUserID(c)
 	if !ok {
 		response.Unauthorized(c, "User not authenticated")
 		return
 	}
 
-	user, err := h.service.GetUser(userID)
-	if err != nil {
-		if errors.Is(err, ErrUserNotFound) {
-			response.NotFound(c, "User not found")
-			return
-		}
-		response.InternalError(c, "Failed to get user")
+	user, err := h.service.GetUserByID(userID)
+	if err != nil || user == nil {
+		response.NotFound(c, "User not found")
 		return
 	}
 
@@ -137,15 +127,13 @@ func (h *Handler) GetCurrentUser(c *gin.Context) {
 
 // ChangePassword godoc
 // @Summary Change password
-// @Description Change authenticated user's password
+// @Description Change current user password
 // @Tags auth
 // @Accept json
 // @Produce json
 // @Security BearerAuth
-// @Param request body ChangePasswordRequest true "Password change data"
+// @Param request body ChangePasswordRequest true "Password change details"
 // @Success 200 {object} response.Response
-// @Failure 400 {object} response.Response
-// @Failure 401 {object} response.Response
 // @Router /api/v1/auth/password [put]
 func (h *Handler) ChangePassword(c *gin.Context) {
 	userID, ok := middleware.GetUserID(c)
@@ -156,13 +144,13 @@ func (h *Handler) ChangePassword(c *gin.Context) {
 
 	var req ChangePasswordRequest
 	if err := c.ShouldBindJSON(&req); err != nil {
-		response.ValidationError(c, "Invalid request data", err.Error())
+		response.ValidationError(c, "Invalid request", err.Error())
 		return
 	}
 
-	err := h.service.ChangePassword(userID, &req)
+	err := h.service.ChangePassword(userID, req.CurrentPassword, req.NewPassword)
 	if err != nil {
-		if errors.Is(err, ErrInvalidPassword) {
+		if errors.Is(err, ErrInvalidCredentials) {
 			response.BadRequest(c, "INVALID_PASSWORD", "Current password is incorrect")
 			return
 		}
@@ -170,5 +158,5 @@ func (h *Handler) ChangePassword(c *gin.Context) {
 		return
 	}
 
-	c.JSON(http.StatusOK, gin.H{"success": true, "message": "Password changed successfully"})
+	response.OK(c, gin.H{"message": "Password changed successfully"})
 }

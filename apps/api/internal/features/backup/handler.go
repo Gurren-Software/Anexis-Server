@@ -2,11 +2,11 @@ package backup
 
 import (
 	"errors"
-	"strconv"
 
 	"github.com/Treefle-labs/anexis-server/apps/api/internal/infrastructure/http/middleware"
 	"github.com/Treefle-labs/anexis-server/apps/api/internal/infrastructure/http/response"
 	"github.com/gin-gonic/gin"
+	"github.com/google/uuid"
 )
 
 // Handler handles backup HTTP requests
@@ -53,7 +53,7 @@ func (h *Handler) StartExport(c *gin.Context) {
 // @Tags backup
 // @Produce json
 // @Security BearerAuth
-// @Param id path int true "Job ID"
+// @Param id path string true "Job ID"
 // @Success 200 {object} response.Response{data=BackupResponse}
 // @Router /api/v1/backup/{id} [get]
 func (h *Handler) Get(c *gin.Context) {
@@ -63,13 +63,13 @@ func (h *Handler) Get(c *gin.Context) {
 		return
 	}
 
-	jobID, _ := strconv.ParseUint(c.Param("id"), 10, 32)
-	if jobID == 0 {
+	jobID, err := uuid.Parse(c.Param("id"))
+	if err != nil {
 		response.BadRequest(c, "INVALID_ID", "Invalid job ID")
 		return
 	}
 
-	job, err := h.service.GetJob(userID, uint(jobID))
+	job, err := h.service.GetJob(userID, jobID)
 	if err != nil {
 		if errors.Is(err, ErrJobNotFound) {
 			response.NotFound(c, "Backup job not found")
@@ -131,7 +131,7 @@ func (h *Handler) List(c *gin.Context) {
 // @Tags backup
 // @Produce json
 // @Security BearerAuth
-// @Param id path int true "Job ID"
+// @Param id path string true "Job ID"
 // @Success 200 {object} response.Response
 // @Router /api/v1/backup/{id}/download [get]
 func (h *Handler) Download(c *gin.Context) {
@@ -141,13 +141,13 @@ func (h *Handler) Download(c *gin.Context) {
 		return
 	}
 
-	jobID, _ := strconv.ParseUint(c.Param("id"), 10, 32)
-	if jobID == 0 {
+	jobID, err := uuid.Parse(c.Param("id"))
+	if err != nil {
 		response.BadRequest(c, "INVALID_ID", "Invalid job ID")
 		return
 	}
 
-	url, err := h.service.GetDownloadURL(c.Request.Context(), userID, uint(jobID))
+	url, err := h.service.GetDownloadURL(c.Request.Context(), userID, jobID)
 	if err != nil {
 		if errors.Is(err, ErrJobNotFound) {
 			response.NotFound(c, "Backup not found")

@@ -3,48 +3,50 @@ package models
 import (
 	"time"
 
-	"gorm.io/gorm"
+	"github.com/google/uuid"
 )
 
 // LinkType represents the type of access link
 type LinkType string
 
 const (
-	LinkTypeDownload  LinkType = "download"  // Direct download
-	LinkTypeStream    LinkType = "stream"    // Streaming access
-	LinkTypePermanent LinkType = "permanent" // Never expires
-	LinkTypeTemporal  LinkType = "temporal"  // Time-limited access
+	LinkTypeDownload  LinkType = "download"
+	LinkTypeStream    LinkType = "stream"
+	LinkTypePermanent LinkType = "permanent"
+	LinkTypeTemporal  LinkType = "temporal"
 )
 
-// LinkAccessType defines who can access the link
+// LinkAccessType represents the access level of a link
 type LinkAccessType string
 
 const (
-	LinkAccessPublic     LinkAccessType = "public"     // Anyone with link
-	LinkAccessPrivate    LinkAccessType = "private"    // Owner only
-	LinkAccessRestricted LinkAccessType = "restricted" // Specific users/passwords
+	LinkAccessPublic     LinkAccessType = "public"
+	LinkAccessPrivate    LinkAccessType = "private"
+	LinkAccessRestricted LinkAccessType = "restricted"
 )
 
-// Link represents an access link to a file
+// Link represents an access link for a file
 type Link struct {
-	gorm.Model
-	UserID     uint           `gorm:"index;not null" json:"user_id"`
-	FileID     uint           `gorm:"index;not null" json:"file_id"`
-	Token      string         `gorm:"uniqueIndex;not null" json:"token"`
-	Type       LinkType       `gorm:"not null" json:"type"`
-	AccessType LinkAccessType `gorm:"default:'public'" json:"access_type"`
+	BaseModel
+	UserID uuid.UUID `gorm:"type:uuid;not null;index" json:"user_id"`
+	FileID uuid.UUID `gorm:"type:uuid;not null;index" json:"file_id"`
+	Token  string    `gorm:"uniqueIndex;not null" json:"token"`
+	Type   LinkType  `gorm:"not null" json:"type"`
 
 	// Access control
-	Password       *string    `json:"-"`                       // Optional password protection
-	MaxDownloads   *int       `json:"max_downloads,omitempty"` // Max number of downloads
-	DownloadCount  int        `gorm:"default:0" json:"download_count"`
-	AllowedEmails  string     `json:"allowed_emails,omitempty"` // Comma-separated allowed emails
-	ExpiresAt      *time.Time `json:"expires_at,omitempty"`     // For temporal links
+	AccessType    LinkAccessType `gorm:"default:public" json:"access_type"`
+	Password      *string        `json:"-"`
+	MaxDownloads  *int           `json:"max_downloads,omitempty"`
+	DownloadCount int            `gorm:"default:0" json:"download_count"`
+	AllowedEmails string         `json:"allowed_emails,omitempty"`
+
+	// Expiration
+	ExpiresAt      *time.Time `json:"expires_at,omitempty"`
 	LastAccessedAt *time.Time `json:"last_accessed_at,omitempty"`
 
 	// Metadata
-	Name        string `json:"name,omitempty"`        // Custom link name
-	Description string `json:"description,omitempty"` // Link description
+	Name        string `json:"name,omitempty"`
+	Description string `json:"description,omitempty"`
 
 	// Relationships
 	User User `gorm:"foreignKey:UserID" json:"-"`
@@ -56,15 +58,15 @@ func (Link) TableName() string {
 	return "links"
 }
 
-// IsExpired checks if the link has expired
+// IsExpired returns true if the link has expired
 func (l *Link) IsExpired() bool {
-	if l.Type == LinkTypePermanent || l.ExpiresAt == nil {
+	if l.ExpiresAt == nil {
 		return false
 	}
 	return time.Now().After(*l.ExpiresAt)
 }
 
-// HasDownloadsRemaining checks if downloads are still allowed
+// HasDownloadsRemaining returns true if downloads are still available
 func (l *Link) HasDownloadsRemaining() bool {
 	if l.MaxDownloads == nil {
 		return true
@@ -72,7 +74,7 @@ func (l *Link) HasDownloadsRemaining() bool {
 	return l.DownloadCount < *l.MaxDownloads
 }
 
-// CanAccess checks if the link is still valid for access
-func (l *Link) CanAccess() bool {
-	return !l.IsExpired() && l.HasDownloadsRemaining()
+// GetID returns the link ID
+func (l *Link) GetID() uuid.UUID {
+	return l.ID
 }

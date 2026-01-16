@@ -3,11 +3,11 @@ package links
 import (
 	"errors"
 	"io"
-	"strconv"
 
 	"github.com/Treefle-labs/anexis-server/apps/api/internal/infrastructure/http/middleware"
 	"github.com/Treefle-labs/anexis-server/apps/api/internal/infrastructure/http/response"
 	"github.com/gin-gonic/gin"
+	"github.com/google/uuid"
 )
 
 // Handler handles link HTTP requests
@@ -58,7 +58,7 @@ func (h *Handler) Create(c *gin.Context) {
 // @Tags links
 // @Produce json
 // @Security BearerAuth
-// @Param file_id query int false "Filter by file ID"
+// @Param file_id query string false "Filter by file ID"
 // @Param type query string false "Filter by link type"
 // @Param page query int false "Page number" default(1)
 // @Param per_page query int false "Items per page" default(20)
@@ -75,6 +75,16 @@ func (h *Handler) List(c *gin.Context) {
 	if err := c.ShouldBindQuery(&req); err != nil {
 		req.Page = 1
 		req.PerPage = 20
+	}
+
+	// Manually parse file_id since Gin doesn't bind *uuid.UUID from query params
+	if fileIDStr := c.Query("file_id"); fileIDStr != "" {
+		fileID, err := uuid.Parse(fileIDStr)
+		if err != nil {
+			response.BadRequest(c, "INVALID_FILE_ID", "Invalid file ID")
+			return
+		}
+		req.FileID = &fileID
 	}
 
 	links, total, err := h.service.List(userID, &req)
@@ -102,7 +112,7 @@ func (h *Handler) List(c *gin.Context) {
 // @Accept json
 // @Produce json
 // @Security BearerAuth
-// @Param id path int true "Link ID"
+// @Param id path string true "Link ID"
 // @Param request body UpdateLinkRequest true "Updated link details"
 // @Success 200 {object} response.Response{data=LinkResponse}
 // @Router /api/v1/links/{id} [put]
@@ -113,8 +123,8 @@ func (h *Handler) Update(c *gin.Context) {
 		return
 	}
 
-	linkID, _ := strconv.ParseUint(c.Param("id"), 10, 32)
-	if linkID == 0 {
+	linkID, err := uuid.Parse(c.Param("id"))
+	if err != nil {
 		response.BadRequest(c, "INVALID_ID", "Invalid link ID")
 		return
 	}
@@ -125,7 +135,7 @@ func (h *Handler) Update(c *gin.Context) {
 		return
 	}
 
-	link, err := h.service.Update(userID, uint(linkID), &req)
+	link, err := h.service.Update(userID, linkID, &req)
 	if err != nil {
 		if errors.Is(err, ErrLinkNotFound) {
 			response.NotFound(c, "Link not found")
@@ -144,7 +154,7 @@ func (h *Handler) Update(c *gin.Context) {
 // @Tags links
 // @Produce json
 // @Security BearerAuth
-// @Param id path int true "Link ID"
+// @Param id path string true "Link ID"
 // @Success 204
 // @Router /api/v1/links/{id} [delete]
 func (h *Handler) Delete(c *gin.Context) {
@@ -154,13 +164,13 @@ func (h *Handler) Delete(c *gin.Context) {
 		return
 	}
 
-	linkID, _ := strconv.ParseUint(c.Param("id"), 10, 32)
-	if linkID == 0 {
+	linkID, err := uuid.Parse(c.Param("id"))
+	if err != nil {
 		response.BadRequest(c, "INVALID_ID", "Invalid link ID")
 		return
 	}
 
-	err := h.service.Delete(userID, uint(linkID))
+	err = h.service.Delete(userID, linkID)
 	if err != nil {
 		if errors.Is(err, ErrLinkNotFound) {
 			response.NotFound(c, "Link not found")

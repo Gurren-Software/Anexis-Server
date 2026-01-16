@@ -4,6 +4,7 @@ import (
 	"errors"
 
 	"github.com/Treefle-labs/anexis-server/packages/database/models"
+	"github.com/google/uuid"
 	"gorm.io/gorm"
 )
 
@@ -23,9 +24,9 @@ func (r *Repository) Create(link *models.Link) error {
 }
 
 // FindByID finds a link by ID
-func (r *Repository) FindByID(id uint) (*models.Link, error) {
+func (r *Repository) FindByID(id uuid.UUID) (*models.Link, error) {
 	var link models.Link
-	err := r.db.Preload("File").First(&link, id).Error
+	err := r.db.Preload("File").First(&link, "id = ?", id).Error
 	if err != nil {
 		if errors.Is(err, gorm.ErrRecordNotFound) {
 			return nil, nil
@@ -49,7 +50,7 @@ func (r *Repository) FindByToken(token string) (*models.Link, error) {
 }
 
 // FindByIDAndUser finds a link by ID and user
-func (r *Repository) FindByIDAndUser(id, userID uint) (*models.Link, error) {
+func (r *Repository) FindByIDAndUser(id, userID uuid.UUID) (*models.Link, error) {
 	var link models.Link
 	err := r.db.Preload("File").Where("id = ? AND user_id = ?", id, userID).First(&link).Error
 	if err != nil {
@@ -62,7 +63,7 @@ func (r *Repository) FindByIDAndUser(id, userID uint) (*models.Link, error) {
 }
 
 // List lists links for a user
-func (r *Repository) List(userID uint, fileID *uint, linkType string, page, perPage int) ([]models.Link, int64, error) {
+func (r *Repository) List(userID uuid.UUID, fileID *uuid.UUID, linkType string, page, perPage int) ([]models.Link, int64, error) {
 	var links []models.Link
 	var total int64
 
@@ -94,18 +95,18 @@ func (r *Repository) Update(link *models.Link) error {
 }
 
 // IncrementDownloadCount increments download count
-func (r *Repository) IncrementDownloadCount(id uint) error {
+func (r *Repository) IncrementDownloadCount(id uuid.UUID) error {
 	return r.db.Model(&models.Link{}).Where("id = ?", id).
 		UpdateColumn("download_count", gorm.Expr("download_count + 1")).Error
 }
 
 // UpdateLastAccessed updates last accessed timestamp
-func (r *Repository) UpdateLastAccessed(id uint) error {
+func (r *Repository) UpdateLastAccessed(id uuid.UUID) error {
 	return r.db.Model(&models.Link{}).Where("id = ?", id).
 		Update("last_accessed_at", gorm.Expr("NOW()")).Error
 }
 
 // Delete deletes a link
-func (r *Repository) Delete(id uint) error {
-	return r.db.Delete(&models.Link{}, id).Error
+func (r *Repository) Delete(id uuid.UUID) error {
+	return r.db.Delete(&models.Link{}, "id = ?", id).Error
 }

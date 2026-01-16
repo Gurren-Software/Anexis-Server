@@ -4,37 +4,36 @@ import (
 	"errors"
 	"io"
 
+	"github.com/Treefle-labs/anexis-server/apps/api/internal/features/auth"
 	"github.com/Treefle-labs/anexis-server/apps/api/internal/infrastructure/http/middleware"
 	"github.com/Treefle-labs/anexis-server/apps/api/internal/infrastructure/http/response"
 	"github.com/gin-gonic/gin"
+	"github.com/google/uuid"
 )
 
 // Handler handles file HTTP requests
 type Handler struct {
 	service  *Service
-	authRepo AuthRepository
+	authRepo *auth.Repository
 }
 
 // NewHandler creates a new files handler
-func NewHandler(service *Service, authRepo AuthRepository) *Handler {
+func NewHandler(service *Service, authRepo *auth.Repository) *Handler {
 	return &Handler{service: service, authRepo: authRepo}
 }
 
 // Upload godoc
-// @Summary Upload a file
-// @Description Upload a file to storage
+// @Summary Upload file
+// @Description Upload a new file
 // @Tags files
 // @Accept multipart/form-data
 // @Produce json
 // @Security BearerAuth
 // @Param file formData file true "File to upload"
-// @Param parent_id formData int false "Parent folder ID"
-// @Param description formData string false "File description"
-// @Param tags formData string false "Comma-separated tags"
 // @Param compress formData bool false "Compress file"
+// @Param parent_id formData string false "Parent folder ID"
+// @Param description formData string false "File description"
 // @Success 201 {object} response.Response{data=FileResponse}
-// @Failure 400 {object} response.Response
-// @Failure 401 {object} response.Response
 // @Router /api/v1/files/upload [post]
 func (h *Handler) Upload(c *gin.Context) {
 	userID, ok := middleware.GetUserID(c)
@@ -49,37 +48,47 @@ func (h *Handler) Upload(c *gin.Context) {
 		return
 	}
 
-	var opts UploadRequest
-	if err := c.ShouldBind(&opts); err != nil {
-		// Ignore bind errors for optional fields
+	var req UploadRequest
+	_ = c.ShouldBind(&req)
+
+	// Manually parse parent_id since Gin doesn't bind *uuid.UUID from form data
+	if parentIDStr := c.PostForm("parent_id"); parentIDStr != "" {
+		parentID, err := uuid.Parse(parentIDStr)
+		if err != nil {
+			response.BadRequest(c, "INVALID_PARENT_ID", "Invalid parent folder ID")
+			return
+		}
+		req.ParentID = &parentID
 	}
 
-	// Get user storage info (simplified - in real app, get from user context or cache)
-	storageQuota := int64(5 * 1024 * 1024 * 1024) // 5GB default
-	storageUsed := int64(0)                       // Would be from user record
+	// Get user storage quota
+	user, err := h.authRepo.FindByID(userID)
+	if err != nil || user == nil {
+		response.InternalError(c, "Failed to get user")
+		return
+	}
 
-	fileRecord, err := h.service.Upload(c.Request.Context(), userID, storageQuota, storageUsed, file, &opts)
+	fileRecord, err := h.service.Upload(c.Request.Context(), userID, file, req.Compress, req.ParentID, req.Description, user.StorageQuota)
 	if err != nil {
-		if errors.Is(err, ErrStorageQuotaExceeded) {
-			response.BadRequest(c, "QUOTA_EXCEEDED", "Storage quota exceeded")
+		if errors.Is(err, ErrStorageExceeded) {
+			response.BadRequest(c, "STORAGE_EXCEEDED", "Storage quota exceeded")
 			return
 		}
 		response.InternalError(c, "Failed to upload file")
 		return
 	}
 
-	response.Created(c, ToFileResponse(fileRecord))
+	response.Created(c, h.service.ToFileResponse(fileRecord))
 }
 
 // Download godoc
-// @Summary Download a file
-// @Description Download a file from storage
+// @Summary Download file
+// @Description Download a file
 // @Tags files
 // @Produce octet-stream
 // @Security BearerAuth
-// @Param id path int true "File ID"
+// @Param id path string true "File ID"
 // @Success 200 {file} binary
-// @Failure 404 {object} response.Response
 // @Router /api/v1/files/{id}/download [get]
 func (h *Handler) Download(c *gin.Context) {
 	userID, ok := middleware.GetUserID(c)
@@ -88,8 +97,8 @@ func (h *Handler) Download(c *gin.Context) {
 		return
 	}
 
-	fileID := parseUint(c.Param("id"))
-	if fileID == 0 {
+	fileID, err := uuid.Parse(c.Param("id"))
+	if err != nil {
 		response.BadRequest(c, "INVALID_ID", "Invalid file ID")
 		return
 	}
@@ -116,13 +125,12 @@ func (h *Handler) Download(c *gin.Context) {
 
 // Get godoc
 // @Summary Get file details
-// @Description Get metadata for a file
+// @Description Get file metadata
 // @Tags files
 // @Produce json
 // @Security BearerAuth
-// @Param id path int true "File ID"
+// @Param id path string true "File ID"
 // @Success 200 {object} response.Response{data=FileResponse}
-// @Failure 404 {object} response.Response
 // @Router /api/v1/files/{id} [get]
 func (h *Handler) Get(c *gin.Context) {
 	userID, ok := middleware.GetUserID(c)
@@ -131,8 +139,8 @@ func (h *Handler) Get(c *gin.Context) {
 		return
 	}
 
-	fileID := parseUint(c.Param("id"))
-	if fileID == 0 {
+	fileID, err := uuid.Parse(c.Param("id"))
+	if err != nil {
 		response.BadRequest(c, "INVALID_ID", "Invalid file ID")
 		return
 	}
@@ -147,17 +155,17 @@ func (h *Handler) Get(c *gin.Context) {
 		return
 	}
 
-	response.OK(c, ToFileResponse(file))
+	response.OK(c, h.service.ToFileResponse(file))
 }
 
 // List godoc
 // @Summary List files
-// @Description List user's files with optional filtering
+// @Description List files with pagination
 // @Tags files
 // @Produce json
 // @Security BearerAuth
-// @Param parent_id query int false "Parent folder ID"
-// @Param search query string false "Search query"
+// @Param parent_id query string false "Parent folder ID"
+// @Param search query string false "Search term"
 // @Param page query int false "Page number" default(1)
 // @Param per_page query int false "Items per page" default(20)
 // @Success 200 {object} response.Response{data=FileListResponse}
@@ -171,9 +179,18 @@ func (h *Handler) List(c *gin.Context) {
 
 	var req ListFilesRequest
 	if err := c.ShouldBindQuery(&req); err != nil {
-		// Use defaults
 		req.Page = 1
 		req.PerPage = 20
+	}
+
+	// Manually parse parent_id since Gin doesn't bind *uuid.UUID from query params
+	if parentIDStr := c.Query("parent_id"); parentIDStr != "" {
+		parentID, err := uuid.Parse(parentIDStr)
+		if err != nil {
+			response.BadRequest(c, "INVALID_PARENT_ID", "Invalid parent folder ID")
+			return
+		}
+		req.ParentID = &parentID
 	}
 
 	files, total, err := h.service.ListFiles(userID, &req)
@@ -184,7 +201,7 @@ func (h *Handler) List(c *gin.Context) {
 
 	fileResponses := make([]FileResponse, len(files))
 	for i, f := range files {
-		fileResponses[i] = *ToFileResponse(&f)
+		fileResponses[i] = *h.service.ToFileResponse(&f)
 	}
 
 	response.OKWithMeta(c, fileResponses, &response.Meta{
@@ -223,7 +240,7 @@ func (h *Handler) CreateFolder(c *gin.Context) {
 		return
 	}
 
-	response.Created(c, ToFileResponse(folder))
+	response.Created(c, h.service.ToFileResponse(folder))
 }
 
 // Rename godoc
@@ -233,7 +250,7 @@ func (h *Handler) CreateFolder(c *gin.Context) {
 // @Accept json
 // @Produce json
 // @Security BearerAuth
-// @Param id path int true "File ID"
+// @Param id path string true "File ID"
 // @Param request body RenameRequest true "New name"
 // @Success 200 {object} response.Response{data=FileResponse}
 // @Router /api/v1/files/{id}/rename [put]
@@ -244,8 +261,8 @@ func (h *Handler) Rename(c *gin.Context) {
 		return
 	}
 
-	fileID := parseUint(c.Param("id"))
-	if fileID == 0 {
+	fileID, err := uuid.Parse(c.Param("id"))
+	if err != nil {
 		response.BadRequest(c, "INVALID_ID", "Invalid file ID")
 		return
 	}
@@ -256,28 +273,28 @@ func (h *Handler) Rename(c *gin.Context) {
 		return
 	}
 
-	file, err := h.service.Rename(userID, fileID, &req)
+	file, err := h.service.Rename(userID, fileID, req.Name)
 	if err != nil {
 		if errors.Is(err, ErrFileNotFound) {
 			response.NotFound(c, "File not found")
 			return
 		}
-		response.InternalError(c, "Failed to rename")
+		response.InternalError(c, "Failed to rename file")
 		return
 	}
 
-	response.OK(c, ToFileResponse(file))
+	response.OK(c, h.service.ToFileResponse(file))
 }
 
 // Move godoc
 // @Summary Move file/folder
-// @Description Move a file or folder to another location
+// @Description Move a file or folder
 // @Tags files
 // @Accept json
 // @Produce json
 // @Security BearerAuth
-// @Param id path int true "File ID"
-// @Param request body MoveRequest true "Target location"
+// @Param id path string true "File ID"
+// @Param request body MoveRequest true "New parent"
 // @Success 200 {object} response.Response{data=FileResponse}
 // @Router /api/v1/files/{id}/move [put]
 func (h *Handler) Move(c *gin.Context) {
@@ -287,8 +304,8 @@ func (h *Handler) Move(c *gin.Context) {
 		return
 	}
 
-	fileID := parseUint(c.Param("id"))
-	if fileID == 0 {
+	fileID, err := uuid.Parse(c.Param("id"))
+	if err != nil {
 		response.BadRequest(c, "INVALID_ID", "Invalid file ID")
 		return
 	}
@@ -299,17 +316,17 @@ func (h *Handler) Move(c *gin.Context) {
 		return
 	}
 
-	file, err := h.service.Move(userID, fileID, &req)
+	file, err := h.service.Move(userID, fileID, req.ParentID)
 	if err != nil {
 		if errors.Is(err, ErrFileNotFound) {
 			response.NotFound(c, "File not found")
 			return
 		}
-		response.InternalError(c, "Failed to move")
+		response.InternalError(c, "Failed to move file")
 		return
 	}
 
-	response.OK(c, ToFileResponse(file))
+	response.OK(c, h.service.ToFileResponse(file))
 }
 
 // Delete godoc
@@ -318,9 +335,8 @@ func (h *Handler) Move(c *gin.Context) {
 // @Tags files
 // @Produce json
 // @Security BearerAuth
-// @Param id path int true "File ID"
+// @Param id path string true "File ID"
 // @Success 204
-// @Failure 404 {object} response.Response
 // @Router /api/v1/files/{id} [delete]
 func (h *Handler) Delete(c *gin.Context) {
 	userID, ok := middleware.GetUserID(c)
@@ -329,32 +345,21 @@ func (h *Handler) Delete(c *gin.Context) {
 		return
 	}
 
-	fileID := parseUint(c.Param("id"))
-	if fileID == 0 {
+	fileID, err := uuid.Parse(c.Param("id"))
+	if err != nil {
 		response.BadRequest(c, "INVALID_ID", "Invalid file ID")
 		return
 	}
 
-	err := h.service.Delete(c.Request.Context(), userID, fileID)
+	err = h.service.Delete(c.Request.Context(), userID, fileID)
 	if err != nil {
 		if errors.Is(err, ErrFileNotFound) {
 			response.NotFound(c, "File not found")
 			return
 		}
-		response.InternalError(c, "Failed to delete")
+		response.InternalError(c, "Failed to delete file")
 		return
 	}
 
 	response.NoContent(c)
-}
-
-func parseUint(s string) uint {
-	var id uint
-	for _, c := range s {
-		if c < '0' || c > '9' {
-			return 0
-		}
-		id = id*10 + uint(c-'0')
-	}
-	return id
 }

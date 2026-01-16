@@ -4,12 +4,12 @@ import (
 	"database/sql"
 	"time"
 
-	"gorm.io/gorm"
+	"github.com/google/uuid"
 )
 
 // User represents a user account in the system
 type User struct {
-	gorm.Model
+	BaseModel
 	Email        string         `gorm:"uniqueIndex;not null" json:"email"`
 	Name         string         `gorm:"not null" json:"name"`
 	PasswordHash string         `gorm:"not null" json:"-"`
@@ -33,4 +33,9 @@ func (User) TableName() string {
 // AvailableStorage returns the remaining storage quota
 func (u *User) AvailableStorage() int64 {
 	return u.StorageQuota - u.StorageUsed
+}
+
+// GetID returns the user ID as string for compatibility
+func (u *User) GetID() uuid.UUID {
+	return u.ID
 }

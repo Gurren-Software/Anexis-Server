@@ -1,6 +1,6 @@
 -- Create "users" table
 CREATE TABLE "public"."users" (
-  "id" bigserial NOT NULL,
+  "id" uuid NOT NULL DEFAULT gen_random_uuid(),
   "created_at" timestamptz NULL,
   "updated_at" timestamptz NULL,
   "deleted_at" timestamptz NULL,
@@ -23,11 +23,11 @@ CREATE UNIQUE INDEX "idx_users_email" ON "public"."users" ("email");
 CREATE UNIQUE INDEX "idx_users_member_number" ON "public"."users" ("member_number");
 -- Create "backup_jobs" table
 CREATE TABLE "public"."backup_jobs" (
-  "id" bigserial NOT NULL,
+  "id" uuid NOT NULL DEFAULT gen_random_uuid(),
   "created_at" timestamptz NULL,
   "updated_at" timestamptz NULL,
   "deleted_at" timestamptz NULL,
-  "user_id" bigint NOT NULL,
+  "user_id" uuid NOT NULL,
   "type" text NOT NULL,
   "status" text NULL DEFAULT 'pending',
   "archive_key" text NULL,
@@ -49,11 +49,11 @@ CREATE INDEX "idx_backup_jobs_deleted_at" ON "public"."backup_jobs" ("deleted_at
 CREATE INDEX "idx_backup_jobs_user_id" ON "public"."backup_jobs" ("user_id");
 -- Create "files" table
 CREATE TABLE "public"."files" (
-  "id" bigserial NOT NULL,
+  "id" uuid NOT NULL DEFAULT gen_random_uuid(),
   "created_at" timestamptz NULL,
   "updated_at" timestamptz NULL,
   "deleted_at" timestamptz NULL,
-  "user_id" bigint NOT NULL,
+  "user_id" uuid NOT NULL,
   "name" text NOT NULL,
   "original_name" text NOT NULL,
   "mime_type" text NOT NULL,
@@ -64,12 +64,13 @@ CREATE TABLE "public"."files" (
   "status" text NULL DEFAULT 'pending',
   "is_encrypted" boolean NULL DEFAULT false,
   "is_compressed" boolean NULL DEFAULT false,
-  "parent_id" bigint NULL,
+  "parent_id" uuid NULL,
   "description" text NULL,
   "tags" text NULL,
   "uploaded_at" timestamptz NULL,
   "processed_at" timestamptz NULL,
   PRIMARY KEY ("id"),
+  CONSTRAINT "fk_files_parent" FOREIGN KEY ("parent_id") REFERENCES "public"."files" ("id") ON UPDATE NO ACTION ON DELETE NO ACTION,
   CONSTRAINT "fk_users_files" FOREIGN KEY ("user_id") REFERENCES "public"."users" ("id") ON UPDATE NO ACTION ON DELETE NO ACTION
 );
 -- Create index "idx_files_deleted_at" to table: "files"
@@ -82,12 +83,12 @@ CREATE UNIQUE INDEX "idx_files_storage_key" ON "public"."files" ("storage_key");
 CREATE INDEX "idx_files_user_id" ON "public"."files" ("user_id");
 -- Create "links" table
 CREATE TABLE "public"."links" (
-  "id" bigserial NOT NULL,
+  "id" uuid NOT NULL DEFAULT gen_random_uuid(),
   "created_at" timestamptz NULL,
   "updated_at" timestamptz NULL,
   "deleted_at" timestamptz NULL,
-  "user_id" bigint NOT NULL,
-  "file_id" bigint NOT NULL,
+  "user_id" uuid NOT NULL,
+  "file_id" uuid NOT NULL,
   "token" text NOT NULL,
   "type" text NOT NULL,
   "access_type" text NULL DEFAULT 'public',
@@ -113,11 +114,11 @@ CREATE UNIQUE INDEX "idx_links_token" ON "public"."links" ("token");
 CREATE INDEX "idx_links_user_id" ON "public"."links" ("user_id");
 -- Create "migration_jobs" table
 CREATE TABLE "public"."migration_jobs" (
-  "id" bigserial NOT NULL,
+  "id" uuid NOT NULL DEFAULT gen_random_uuid(),
   "created_at" timestamptz NULL,
   "updated_at" timestamptz NULL,
   "deleted_at" timestamptz NULL,
-  "user_id" bigint NOT NULL,
+  "user_id" uuid NOT NULL,
   "provider" text NOT NULL,
   "status" text NULL DEFAULT 'pending',
   "total_files" bigint NULL DEFAULT 0,

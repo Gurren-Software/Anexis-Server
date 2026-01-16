@@ -4,6 +4,7 @@ import (
 	"errors"
 
 	"github.com/Treefle-labs/anexis-server/packages/database/models"
+	"github.com/google/uuid"
 	"gorm.io/gorm"
 )
 
@@ -23,9 +24,9 @@ func (r *Repository) Create(job *models.MigrationJob) error {
 }
 
 // FindByID finds a migration job by ID
-func (r *Repository) FindByID(id uint) (*models.MigrationJob, error) {
+func (r *Repository) FindByID(id uuid.UUID) (*models.MigrationJob, error) {
 	var job models.MigrationJob
-	err := r.db.First(&job, id).Error
+	err := r.db.First(&job, "id = ?", id).Error
 	if err != nil {
 		if errors.Is(err, gorm.ErrRecordNotFound) {
 			return nil, nil
@@ -36,7 +37,7 @@ func (r *Repository) FindByID(id uint) (*models.MigrationJob, error) {
 }
 
 // FindByIDAndUser finds a migration job by ID and user
-func (r *Repository) FindByIDAndUser(id, userID uint) (*models.MigrationJob, error) {
+func (r *Repository) FindByIDAndUser(id, userID uuid.UUID) (*models.MigrationJob, error) {
 	var job models.MigrationJob
 	err := r.db.Where("id = ? AND user_id = ?", id, userID).First(&job).Error
 	if err != nil {
@@ -49,7 +50,7 @@ func (r *Repository) FindByIDAndUser(id, userID uint) (*models.MigrationJob, err
 }
 
 // List lists migration jobs for a user
-func (r *Repository) List(userID uint, status string, page, perPage int) ([]models.MigrationJob, int64, error) {
+func (r *Repository) List(userID uuid.UUID, status string, page, perPage int) ([]models.MigrationJob, int64, error) {
 	var jobs []models.MigrationJob
 	var total int64
 
@@ -77,13 +78,13 @@ func (r *Repository) Update(job *models.MigrationJob) error {
 }
 
 // UpdateStatus updates migration job status
-func (r *Repository) UpdateStatus(id uint, status models.MigrationStatus) error {
+func (r *Repository) UpdateStatus(id uuid.UUID, status models.MigrationStatus) error {
 	return r.db.Model(&models.MigrationJob{}).Where("id = ?", id).
 		Update("status", status).Error
 }
 
 // UpdateProgress updates migration job progress
-func (r *Repository) UpdateProgress(id uint, processedFiles, failedFiles int, processedBytes int64) error {
+func (r *Repository) UpdateProgress(id uuid.UUID, processedFiles, failedFiles int, processedBytes int64) error {
 	return r.db.Model(&models.MigrationJob{}).Where("id = ?", id).
 		Updates(map[string]interface{}{
 			"processed_files": processedFiles,
@@ -93,7 +94,7 @@ func (r *Repository) UpdateProgress(id uint, processedFiles, failedFiles int, pr
 }
 
 // GetActiveJob gets any active migration job for user
-func (r *Repository) GetActiveJob(userID uint) (*models.MigrationJob, error) {
+func (r *Repository) GetActiveJob(userID uuid.UUID) (*models.MigrationJob, error) {
 	var job models.MigrationJob
 	err := r.db.Where("user_id = ? AND status IN (?)", userID,
 		[]models.MigrationStatus{models.MigrationStatusPending, models.MigrationStatusRunning}).

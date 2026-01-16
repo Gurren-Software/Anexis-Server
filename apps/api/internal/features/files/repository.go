@@ -4,6 +4,7 @@ import (
 	"errors"
 
 	"github.com/Treefle-labs/anexis-server/packages/database/models"
+	"github.com/google/uuid"
 	"gorm.io/gorm"
 )
 
@@ -17,15 +18,15 @@ func NewRepository(db *gorm.DB) *Repository {
 	return &Repository{db: db}
 }
 
-// Create creates a new file record
+// Create creates a new file
 func (r *Repository) Create(file *models.File) error {
 	return r.db.Create(file).Error
 }
 
 // FindByID finds a file by ID
-func (r *Repository) FindByID(id uint) (*models.File, error) {
+func (r *Repository) FindByID(id uuid.UUID) (*models.File, error) {
 	var file models.File
-	err := r.db.First(&file, id).Error
+	err := r.db.First(&file, "id = ?", id).Error
 	if err != nil {
 		if errors.Is(err, gorm.ErrRecordNotFound) {
 			return nil, nil
@@ -35,8 +36,8 @@ func (r *Repository) FindByID(id uint) (*models.File, error) {
 	return &file, nil
 }
 
-// FindByIDAndUser finds a file by ID and user ID
-func (r *Repository) FindByIDAndUser(id, userID uint) (*models.File, error) {
+// FindByIDAndUser finds a file by ID and user
+func (r *Repository) FindByIDAndUser(id, userID uuid.UUID) (*models.File, error) {
 	var file models.File
 	err := r.db.Where("id = ? AND user_id = ?", id, userID).First(&file).Error
 	if err != nil {
@@ -48,21 +49,8 @@ func (r *Repository) FindByIDAndUser(id, userID uint) (*models.File, error) {
 	return &file, nil
 }
 
-// FindByStorageKey finds a file by storage key
-func (r *Repository) FindByStorageKey(key string) (*models.File, error) {
-	var file models.File
-	err := r.db.Where("storage_key = ?", key).First(&file).Error
-	if err != nil {
-		if errors.Is(err, gorm.ErrRecordNotFound) {
-			return nil, nil
-		}
-		return nil, err
-	}
-	return &file, nil
-}
-
-// List lists files for a user with optional filtering
-func (r *Repository) List(userID uint, parentID *uint, search string, page, perPage int) ([]models.File, int64, error) {
+// List lists files for a user
+func (r *Repository) List(userID uuid.UUID, parentID *uuid.UUID, search string, page, perPage int) ([]models.File, int64, error) {
 	var files []models.File
 	var total int64
 
@@ -75,15 +63,13 @@ func (r *Repository) List(userID uint, parentID *uint, search string, page, perP
 	}
 
 	if search != "" {
-		query = query.Where("name ILIKE ? OR original_name ILIKE ?", "%"+search+"%", "%"+search+"%")
+		query = query.Where("name ILIKE ?", "%"+search+"%")
 	}
 
-	// Count total
 	if err := query.Count(&total).Error; err != nil {
 		return nil, 0, err
 	}
 
-	// Fetch with pagination
 	offset := (page - 1) * perPage
 	if err := query.Offset(offset).Limit(perPage).Order("created_at DESC").Find(&files).Error; err != nil {
 		return nil, 0, err
@@ -92,41 +78,28 @@ func (r *Repository) List(userID uint, parentID *uint, search string, page, perP
 	return files, total, nil
 }
 
-// Update updates a file record
+// Update updates a file
 func (r *Repository) Update(file *models.File) error {
 	return r.db.Save(file).Error
 }
 
-// UpdateStatus updates file status
-func (r *Repository) UpdateStatus(id uint, status models.FileStatus) error {
-	return r.db.Model(&models.File{}).Where("id = ?", id).
-		Update("status", status).Error
+// Delete deletes a file
+func (r *Repository) Delete(id uuid.UUID) error {
+	return r.db.Delete(&models.File{}, "id = ?", id).Error
 }
 
-// Delete soft-deletes a file
-func (r *Repository) Delete(id uint) error {
-	return r.db.Delete(&models.File{}, id).Error
-}
-
-// HardDelete permanently deletes a file
-func (r *Repository) HardDelete(id uint) error {
-	return r.db.Unscoped().Delete(&models.File{}, id).Error
-}
-
-// GetUserFiles gets all files for a user (for backup)
-func (r *Repository) GetUserFiles(userID uint) ([]models.File, error) {
-	var files []models.File
-	err := r.db.Where("user_id = ? AND status = ?", userID, models.FileStatusReady).
-		Find(&files).Error
-	return files, err
-}
-
-// GetTotalSizeByUser calculates total storage used by user
-func (r *Repository) GetTotalSizeByUser(userID uint) (int64, error) {
+// GetUserStorageUsed calculates total storage used by user
+func (r *Repository) GetUserStorageUsed(userID uuid.UUID) (int64, error) {
 	var total int64
 	err := r.db.Model(&models.File{}).
-		Where("user_id = ? AND status = ?", userID, models.FileStatusReady).
-		Select("COALESCE(SUM(size), 0)").
-		Scan(&total).Error
+		Where("user_id = ? AND mime_type != ?", userID, "application/x-directory").
+		Select("COALESCE(SUM(size), 0)").Scan(&total).Error
 	return total, err
+}
+
+// GetUserFiles gets all files for a user
+func (r *Repository) GetUserFiles(userID uuid.UUID) ([]models.File, error) {
+	var files []models.File
+	err := r.db.Where("user_id = ?", userID).Find(&files).Error
+	return files, err
 }

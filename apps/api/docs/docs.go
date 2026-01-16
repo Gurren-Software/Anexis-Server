@@ -25,7 +25,7 @@ const docTemplate = `{
     "paths": {
         "/api/v1/auth/login": {
             "post": {
-                "description": "Authenticate user and return tokens",
+                "description": "Authenticate user and get tokens",
                 "consumes": [
                     "application/json"
                 ],
@@ -35,7 +35,7 @@ const docTemplate = `{
                 "tags": [
                     "auth"
                 ],
-                "summary": "User login",
+                "summary": "Login user",
                 "parameters": [
                     {
                         "description": "Login credentials",
@@ -65,12 +65,6 @@ const docTemplate = `{
                                 }
                             ]
                         }
-                    },
-                    "401": {
-                        "description": "Unauthorized",
-                        "schema": {
-                            "$ref": "#/definitions/response.Response"
-                        }
                     }
                 }
             }
@@ -82,7 +76,7 @@ const docTemplate = `{
                         "BearerAuth": []
                     }
                 ],
-                "description": "Get authenticated user's profile",
+                "description": "Get current authenticated user profile",
                 "produces": [
                     "application/json"
                 ],
@@ -108,12 +102,6 @@ const docTemplate = `{
                                 }
                             ]
                         }
-                    },
-                    "401": {
-                        "description": "Unauthorized",
-                        "schema": {
-                            "$ref": "#/definitions/response.Response"
-                        }
                     }
                 }
             }
@@ -125,7 +113,7 @@ const docTemplate = `{
                         "BearerAuth": []
                     }
                 ],
-                "description": "Change authenticated user's password",
+                "description": "Change current user password",
                 "consumes": [
                     "application/json"
                 ],
@@ -138,7 +126,7 @@ const docTemplate = `{
                 "summary": "Change password",
                 "parameters": [
                     {
-                        "description": "Password change data",
+                        "description": "Password change details",
                         "name": "request",
                         "in": "body",
                         "required": true,
@@ -150,18 +138,6 @@ const docTemplate = `{
                 "responses": {
                     "200": {
                         "description": "OK",
-                        "schema": {
-                            "$ref": "#/definitions/response.Response"
-                        }
-                    },
-                    "400": {
-                        "description": "Bad Request",
-                        "schema": {
-                            "$ref": "#/definitions/response.Response"
-                        }
-                    },
-                    "401": {
-                        "description": "Unauthorized",
                         "schema": {
                             "$ref": "#/definitions/response.Response"
                         }
@@ -181,7 +157,7 @@ const docTemplate = `{
                 "tags": [
                     "auth"
                 ],
-                "summary": "Refresh access token",
+                "summary": "Refresh token",
                 "parameters": [
                     {
                         "description": "Refresh token",
@@ -211,19 +187,13 @@ const docTemplate = `{
                                 }
                             ]
                         }
-                    },
-                    "401": {
-                        "description": "Unauthorized",
-                        "schema": {
-                            "$ref": "#/definitions/response.Response"
-                        }
                     }
                 }
             }
         },
         "/api/v1/auth/register": {
             "post": {
-                "description": "Create a new user account",
+                "description": "Register a new user account",
                 "consumes": [
                     "application/json"
                 ],
@@ -233,10 +203,10 @@ const docTemplate = `{
                 "tags": [
                     "auth"
                 ],
-                "summary": "Register a new user",
+                "summary": "Register new user",
                 "parameters": [
                     {
-                        "description": "Registration data",
+                        "description": "Registration details",
                         "name": "request",
                         "in": "body",
                         "required": true,
@@ -262,18 +232,6 @@ const docTemplate = `{
                                     }
                                 }
                             ]
-                        }
-                    },
-                    "400": {
-                        "description": "Bad Request",
-                        "schema": {
-                            "$ref": "#/definitions/response.Response"
-                        }
-                    },
-                    "422": {
-                        "description": "Unprocessable Entity",
-                        "schema": {
-                            "$ref": "#/definitions/response.Response"
                         }
                     }
                 }
@@ -386,7 +344,7 @@ const docTemplate = `{
                 "summary": "Get backup job",
                 "parameters": [
                     {
-                        "type": "integer",
+                        "type": "string",
                         "description": "Job ID",
                         "name": "id",
                         "in": "path",
@@ -432,7 +390,7 @@ const docTemplate = `{
                 "summary": "Download backup",
                 "parameters": [
                     {
-                        "type": "integer",
+                        "type": "string",
                         "description": "Job ID",
                         "name": "id",
                         "in": "path",
@@ -456,7 +414,7 @@ const docTemplate = `{
                         "BearerAuth": []
                     }
                 ],
-                "description": "List user's files with optional filtering",
+                "description": "List files with pagination",
                 "produces": [
                     "application/json"
                 ],
@@ -466,14 +424,14 @@ const docTemplate = `{
                 "summary": "List files",
                 "parameters": [
                     {
-                        "type": "integer",
+                        "type": "string",
                         "description": "Parent folder ID",
                         "name": "parent_id",
                         "in": "query"
                     },
                     {
                         "type": "string",
-                        "description": "Search query",
+                        "description": "Search term",
                         "name": "search",
                         "in": "query"
                     },
@@ -572,7 +530,7 @@ const docTemplate = `{
                         "BearerAuth": []
                     }
                 ],
-                "description": "Upload a file to storage",
+                "description": "Upload a new file",
                 "consumes": [
                     "multipart/form-data"
                 ],
@@ -582,7 +540,7 @@ const docTemplate = `{
                 "tags": [
                     "files"
                 ],
-                "summary": "Upload a file",
+                "summary": "Upload file",
                 "parameters": [
                     {
                         "type": "file",
@@ -592,7 +550,13 @@ const docTemplate = `{
                         "required": true
                     },
                     {
-                        "type": "integer",
+                        "type": "boolean",
+                        "description": "Compress file",
+                        "name": "compress",
+                        "in": "formData"
+                    },
+                    {
+                        "type": "string",
                         "description": "Parent folder ID",
                         "name": "parent_id",
                         "in": "formData"
@@ -601,18 +565,6 @@ const docTemplate = `{
                         "type": "string",
                         "description": "File description",
                         "name": "description",
-                        "in": "formData"
-                    },
-                    {
-                        "type": "string",
-                        "description": "Comma-separated tags",
-                        "name": "tags",
-                        "in": "formData"
-                    },
-                    {
-                        "type": "boolean",
-                        "description": "Compress file",
-                        "name": "compress",
                         "in": "formData"
                     }
                 ],
@@ -634,18 +586,6 @@ const docTemplate = `{
                                 }
                             ]
                         }
-                    },
-                    "400": {
-                        "description": "Bad Request",
-                        "schema": {
-                            "$ref": "#/definitions/response.Response"
-                        }
-                    },
-                    "401": {
-                        "description": "Unauthorized",
-                        "schema": {
-                            "$ref": "#/definitions/response.Response"
-                        }
                     }
                 }
             }
@@ -657,7 +597,7 @@ const docTemplate = `{
                         "BearerAuth": []
                     }
                 ],
-                "description": "Get metadata for a file",
+                "description": "Get file metadata",
                 "produces": [
                     "application/json"
                 ],
@@ -667,7 +607,7 @@ const docTemplate = `{
                 "summary": "Get file details",
                 "parameters": [
                     {
-                        "type": "integer",
+                        "type": "string",
                         "description": "File ID",
                         "name": "id",
                         "in": "path",
@@ -692,12 +632,6 @@ const docTemplate = `{
                                 }
                             ]
                         }
-                    },
-                    "404": {
-                        "description": "Not Found",
-                        "schema": {
-                            "$ref": "#/definitions/response.Response"
-                        }
                     }
                 }
             },
@@ -717,7 +651,7 @@ const docTemplate = `{
                 "summary": "Delete file/folder",
                 "parameters": [
                     {
-                        "type": "integer",
+                        "type": "string",
                         "description": "File ID",
                         "name": "id",
                         "in": "path",
@@ -727,12 +661,6 @@ const docTemplate = `{
                 "responses": {
                     "204": {
                         "description": "No Content"
-                    },
-                    "404": {
-                        "description": "Not Found",
-                        "schema": {
-                            "$ref": "#/definitions/response.Response"
-                        }
                     }
                 }
             }
@@ -744,17 +672,17 @@ const docTemplate = `{
                         "BearerAuth": []
                     }
                 ],
-                "description": "Download a file from storage",
+                "description": "Download a file",
                 "produces": [
                     "application/octet-stream"
                 ],
                 "tags": [
                     "files"
                 ],
-                "summary": "Download a file",
+                "summary": "Download file",
                 "parameters": [
                     {
-                        "type": "integer",
+                        "type": "string",
                         "description": "File ID",
                         "name": "id",
                         "in": "path",
@@ -767,12 +695,6 @@ const docTemplate = `{
                         "schema": {
                             "type": "file"
                         }
-                    },
-                    "404": {
-                        "description": "Not Found",
-                        "schema": {
-                            "$ref": "#/definitions/response.Response"
-                        }
                     }
                 }
             }
@@ -784,7 +706,7 @@ const docTemplate = `{
                         "BearerAuth": []
                     }
                 ],
-                "description": "Move a file or folder to another location",
+                "description": "Move a file or folder",
                 "consumes": [
                     "application/json"
                 ],
@@ -797,14 +719,14 @@ const docTemplate = `{
                 "summary": "Move file/folder",
                 "parameters": [
                     {
-                        "type": "integer",
+                        "type": "string",
                         "description": "File ID",
                         "name": "id",
                         "in": "path",
                         "required": true
                     },
                     {
-                        "description": "Target location",
+                        "description": "New parent",
                         "name": "request",
                         "in": "body",
                         "required": true,
@@ -855,7 +777,7 @@ const docTemplate = `{
                 "summary": "Rename file/folder",
                 "parameters": [
                     {
-                        "type": "integer",
+                        "type": "string",
                         "description": "File ID",
                         "name": "id",
                         "in": "path",
@@ -910,7 +832,7 @@ const docTemplate = `{
                 "summary": "List links",
                 "parameters": [
                     {
-                        "type": "integer",
+                        "type": "string",
                         "description": "Filter by file ID",
                         "name": "file_id",
                         "in": "query"
@@ -1015,7 +937,7 @@ const docTemplate = `{
                 "summary": "Update link",
                 "parameters": [
                     {
-                        "type": "integer",
+                        "type": "string",
                         "description": "Link ID",
                         "name": "id",
                         "in": "path",
@@ -1068,7 +990,7 @@ const docTemplate = `{
                 "summary": "Delete link",
                 "parameters": [
                     {
-                        "type": "integer",
+                        "type": "string",
                         "description": "Link ID",
                         "name": "id",
                         "in": "path",
@@ -1265,7 +1187,7 @@ const docTemplate = `{
                 "summary": "Get migration job",
                 "parameters": [
                     {
-                        "type": "integer",
+                        "type": "string",
                         "description": "Job ID",
                         "name": "id",
                         "in": "path",
@@ -1311,7 +1233,7 @@ const docTemplate = `{
                 "summary": "Cancel migration",
                 "parameters": [
                     {
-                        "type": "integer",
+                        "type": "string",
                         "description": "Job ID",
                         "name": "id",
                         "in": "path",
@@ -1333,16 +1255,16 @@ const docTemplate = `{
         "auth.ChangePasswordRequest": {
             "type": "object",
             "required": [
-                "new_password",
-                "old_password"
+                "current_password",
+                "new_password"
             ],
             "properties": {
+                "current_password": {
+                    "type": "string"
+                },
                 "new_password": {
                     "type": "string",
                     "minLength": 8
-                },
-                "old_password": {
-                    "type": "string"
                 }
             }
         },
@@ -1401,7 +1323,7 @@ const docTemplate = `{
                     "type": "string"
                 },
                 "expires_in": {
-                    "description": "seconds",
+                    "description": "seconds until expiration",
                     "type": "integer"
                 },
                 "refresh_token": {
@@ -1422,7 +1344,7 @@ const docTemplate = `{
                     "type": "string"
                 },
                 "id": {
-                    "type": "integer"
+                    "type": "string"
                 },
                 "name": {
                     "type": "string"
@@ -1457,7 +1379,7 @@ const docTemplate = `{
                     "type": "string"
                 },
                 "id": {
-                    "type": "integer"
+                    "type": "string"
                 },
                 "last_error": {
                     "type": "string"
@@ -1494,7 +1416,7 @@ const docTemplate = `{
                     "minLength": 1
                 },
                 "parent_id": {
-                    "type": "integer"
+                    "type": "string"
                 }
             }
         },
@@ -1521,16 +1443,22 @@ const docTemplate = `{
         "files.FileResponse": {
             "type": "object",
             "properties": {
+                "created_at": {
+                    "type": "string"
+                },
                 "description": {
                     "type": "string"
                 },
                 "id": {
-                    "type": "integer"
+                    "type": "string"
                 },
                 "is_compressed": {
                     "type": "boolean"
                 },
                 "is_encrypted": {
+                    "type": "boolean"
+                },
+                "is_folder": {
                     "type": "boolean"
                 },
                 "mime_type": {
@@ -1543,18 +1471,12 @@ const docTemplate = `{
                     "type": "string"
                 },
                 "parent_id": {
-                    "type": "integer"
+                    "type": "string"
                 },
                 "size": {
                     "type": "integer"
                 },
-                "status": {
-                    "type": "string"
-                },
-                "tags": {
-                    "type": "string"
-                },
-                "uploaded_at": {
+                "updated_at": {
                     "type": "string"
                 }
             }
@@ -1562,8 +1484,8 @@ const docTemplate = `{
         "files.MoveRequest": {
             "type": "object",
             "properties": {
-                "target_parent_id": {
-                    "type": "integer"
+                "parent_id": {
+                    "type": "string"
                 }
             }
         },
@@ -1603,7 +1525,7 @@ const docTemplate = `{
                     "type": "integer"
                 },
                 "file_id": {
-                    "type": "integer"
+                    "type": "string"
                 },
                 "max_downloads": {
                     "type": "integer"
@@ -1644,13 +1566,13 @@ const docTemplate = `{
                     "type": "string"
                 },
                 "file_id": {
-                    "type": "integer"
+                    "type": "string"
                 },
                 "file_name": {
                     "type": "string"
                 },
                 "id": {
-                    "type": "integer"
+                    "type": "string"
                 },
                 "last_accessed_at": {
                     "type": "string"
@@ -1706,7 +1628,7 @@ const docTemplate = `{
                     "type": "integer"
                 },
                 "id": {
-                    "type": "integer"
+                    "type": "string"
                 },
                 "last_error": {
                     "type": "string"
@@ -1822,7 +1744,7 @@ const docTemplate = `{
 var SwaggerInfo = &swag.Spec{
 	Version:          "1.0",
 	Host:             "localhost:8080",
-	BasePath:         "/api/v1",
+	BasePath:         "/",
 	Schemes:          []string{},
 	Title:            "Anexis Cloud Storage API",
 	Description:      "Cloud file storage server with Backblaze B2 integration",

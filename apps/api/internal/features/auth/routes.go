@@ -18,7 +18,7 @@ func RegisterRoutes(router *gin.RouterGroup, handler *Handler, jwtSecret string)
 		protected := auth.Group("")
 		protected.Use(middleware.JWTAuth(jwtSecret))
 		{
-			protected.GET("/me", handler.GetCurrentUser)
+			protected.GET("/me", handler.Me)
 			protected.PUT("/password", handler.ChangePassword)
 		}
 	}

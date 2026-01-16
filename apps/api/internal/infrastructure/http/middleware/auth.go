@@ -1,66 +1,120 @@
 package middleware
 
 import (
+	"net/http"
 	"strings"
 
-	"github.com/Treefle-labs/anexis-server/apps/api/internal/infrastructure/http/response"
 	"github.com/gin-gonic/gin"
 	"github.com/golang-jwt/jwt/v5"
+	"github.com/google/uuid"
 )
 
-// Claims represents JWT claims
-type Claims struct {
-	UserID uint   `json:"user_id"`
-	Email  string `json:"email"`
-	jwt.RegisteredClaims
-}
+const (
+	// UserIDKey is the key used to store user ID in context
+	UserIDKey = "user_id"
+	// UserEmailKey is the key used to store user email in context
+	UserEmailKey = "user_email"
+)
 
-// JWTAuth creates a JWT authentication middleware
-func JWTAuth(jwtSecret string) gin.HandlerFunc {
+// JWTAuth middleware validates JWT tokens
+func JWTAuth(secret string) gin.HandlerFunc {
 	return func(c *gin.Context) {
 		authHeader := c.GetHeader("Authorization")
 		if authHeader == "" {
-			response.Unauthorized(c, "Authorization header is required")
-			c.Abort()
+			c.AbortWithStatusJSON(http.StatusUnauthorized, gin.H{
+				"success": false,
+				"error": gin.H{
+					"code":    "UNAUTHORIZED",
+					"message": "Authorization header required",
+				},
+			})
 			return
 		}
 
-		// Extract token from "Bearer <token>" format
+		// Extract token from "Bearer <token>"
 		parts := strings.Split(authHeader, " ")
 		if len(parts) != 2 || strings.ToLower(parts[0]) != "bearer" {
-			response.Unauthorized(c, "Invalid authorization header format")
-			c.Abort()
+			c.AbortWithStatusJSON(http.StatusUnauthorized, gin.H{
+				"success": false,
+				"error": gin.H{
+					"code":    "UNAUTHORIZED",
+					"message": "Invalid authorization header format",
+				},
+			})
 			return
 		}
 
 		tokenString := parts[1]
 
 		// Parse and validate token
-		claims := &Claims{}
-		token, err := jwt.ParseWithClaims(tokenString, claims, func(token *jwt.Token) (interface{}, error) {
-			// Validate signing method
+		token, err := jwt.Parse(tokenString, func(token *jwt.Token) (interface{}, error) {
 			if _, ok := token.Method.(*jwt.SigningMethodHMAC); !ok {
 				return nil, jwt.ErrSignatureInvalid
 			}
-			return []byte(jwtSecret), nil
+			return []byte(secret), nil
 		})
 
 		if err != nil || !token.Valid {
-			response.Unauthorized(c, "Invalid or expired token")
-			c.Abort()
+			c.AbortWithStatusJSON(http.StatusUnauthorized, gin.H{
+				"success": false,
+				"error": gin.H{
+					"code":    "UNAUTHORIZED",
+					"message": "Invalid or expired token",
+				},
+			})
 			return
 		}
 
-		// Set user info in context
-		c.Set("userID", claims.UserID)
-		c.Set("userEmail", claims.Email)
+		// Extract claims
+		claims, ok := token.Claims.(jwt.MapClaims)
+		if !ok {
+			c.AbortWithStatusJSON(http.StatusUnauthorized, gin.H{
+				"success": false,
+				"error": gin.H{
+					"code":    "UNAUTHORIZED",
+					"message": "Invalid token claims",
+				},
+			})
+			return
+		}
+
+		// Extract user ID (stored as string UUID)
+		userIDStr, ok := claims["user_id"].(string)
+		if !ok {
+			c.AbortWithStatusJSON(http.StatusUnauthorized, gin.H{
+				"success": false,
+				"error": gin.H{
+					"code":    "UNAUTHORIZED",
+					"message": "Invalid user ID in token",
+				},
+			})
+			return
+		}
+
+		userID, err := uuid.Parse(userIDStr)
+		if err != nil {
+			c.AbortWithStatusJSON(http.StatusUnauthorized, gin.H{
+				"success": false,
+				"error": gin.H{
+					"code":    "UNAUTHORIZED",
+					"message": "Invalid user ID format",
+				},
+			})
+			return
+		}
+
+		// Store in context
+		c.Set(UserIDKey, userID)
+		if email, ok := claims["user_email"].(string); ok {
+			c.Set(UserEmailKey, email)
+		}
+
 		c.Next()
 	}
 }
 
-// OptionalJWTAuth creates an optional JWT authentication middleware
-// Doesn't block requests without token, but sets user info if token is valid
-func OptionalJWTAuth(jwtSecret string) gin.HandlerFunc {
+// OptionalJWTAuth middleware validates JWT tokens but doesn't require them
+func OptionalJWTAuth(secret string) gin.HandlerFunc {
 	return func(c *gin.Context) {
 		authHeader := c.GetHeader("Authorization")
 		if authHeader == "" {
@@ -75,17 +129,40 @@ func OptionalJWTAuth(jwtSecret string) gin.HandlerFunc {
 		}
 
 		tokenString := parts[1]
-		claims := &Claims{}
-		token, err := jwt.ParseWithClaims(tokenString, claims, func(token *jwt.Token) (interface{}, error) {
+
+		token, err := jwt.Parse(tokenString, func(token *jwt.Token) (interface{}, error) {
 			if _, ok := token.Method.(*jwt.SigningMethodHMAC); !ok {
 				return nil, jwt.ErrSignatureInvalid
 			}
-			return []byte(jwtSecret), nil
+			return []byte(secret), nil
 		})
 
-		if err == nil && token.Valid {
-			c.Set("userID", claims.UserID)
-			c.Set("userEmail", claims.Email)
+		if err != nil || !token.Valid {
+			c.Next()
+			return
+		}
+
+		claims, ok := token.Claims.(jwt.MapClaims)
+		if !ok {
+			c.Next()
+			return
+		}
+
+		userIDStr, ok := claims["user_id"].(string)
+		if !ok {
+			c.Next()
+			return
+		}
+
+		userID, err := uuid.Parse(userIDStr)
+		if err != nil {
+			c.Next()
+			return
+		}
+
+		c.Set(UserIDKey, userID)
+		if email, ok := claims["user_email"].(string); ok {
+			c.Set(UserEmailKey, email)
 		}
 
 		c.Next()
@@ -93,19 +170,21 @@ func OptionalJWTAuth(jwtSecret string) gin.HandlerFunc {
 }
 
 // GetUserID extracts user ID from context
-func GetUserID(c *gin.Context) (uint, bool) {
-	userID, exists := c.Get("userID")
+func GetUserID(c *gin.Context) (uuid.UUID, bool) {
+	userID, exists := c.Get(UserIDKey)
 	if !exists {
-		return 0, false
+		return uuid.Nil, false
 	}
-	return userID.(uint), true
+	id, ok := userID.(uuid.UUID)
+	return id, ok
 }
 
 // GetUserEmail extracts user email from context
 func GetUserEmail(c *gin.Context) (string, bool) {
-	email, exists := c.Get("userEmail")
+	email, exists := c.Get(UserEmailKey)
 	if !exists {
 		return "", false
 	}
-	return email.(string), true
+	e, ok := email.(string)
+	return e, ok
 }

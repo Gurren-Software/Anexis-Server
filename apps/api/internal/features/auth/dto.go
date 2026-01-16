@@ -1,5 +1,7 @@
 package auth
 
+import "github.com/google/uuid"
+
 // RegisterRequest represents user registration payload
 type RegisterRequest struct {
 	Name     string `json:"name" binding:"required,min=2,max=100"`
@@ -13,11 +15,11 @@ type LoginRequest struct {
 	Password string `json:"password" binding:"required"`
 }
 
-// TokenResponse represents authentication token response
+// TokenResponse represents JWT token response
 type TokenResponse struct {
 	AccessToken  string `json:"access_token"`
 	TokenType    string `json:"token_type"`
-	ExpiresIn    int    `json:"expires_in"` // seconds
+	ExpiresIn    int64  `json:"expires_in"` // seconds until expiration
 	RefreshToken string `json:"refresh_token,omitempty"`
 }
 
@@ -28,16 +30,16 @@ type RefreshTokenRequest struct {
 
 // UserResponse represents user data in responses
 type UserResponse struct {
-	ID           uint   `json:"id"`
-	Name         string `json:"name"`
-	Email        string `json:"email"`
-	StorageQuota int64  `json:"storage_quota"`
-	StorageUsed  int64  `json:"storage_used"`
-	CreatedAt    string `json:"created_at"`
+	ID           uuid.UUID `json:"id"`
+	Name         string    `json:"name"`
+	Email        string    `json:"email"`
+	StorageQuota int64     `json:"storage_quota"`
+	StorageUsed  int64     `json:"storage_used"`
+	CreatedAt    string    `json:"created_at"`
 }
 
 // ChangePasswordRequest represents password change payload
 type ChangePasswordRequest struct {
-	OldPassword string `json:"old_password" binding:"required"`
-	NewPassword string `json:"new_password" binding:"required,min=8"`
+	CurrentPassword string `json:"current_password" binding:"required"`
+	NewPassword     string `json:"new_password" binding:"required,min=8"`
 }

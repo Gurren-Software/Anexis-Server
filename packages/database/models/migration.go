@@ -3,10 +3,10 @@ package models
 import (
 	"time"
 
-	"gorm.io/gorm"
+	"github.com/google/uuid"
 )
 
-// MigrationStatus represents the state of a migration job
+// MigrationStatus represents the status of a migration job
 type MigrationStatus string
 
 const (
@@ -17,7 +17,7 @@ const (
 	MigrationStatusCancelled MigrationStatus = "cancelled"
 )
 
-// ProviderType represents the cloud provider being migrated from
+// ProviderType represents the cloud provider for migration
 type ProviderType string
 
 const (
@@ -27,12 +27,12 @@ const (
 	ProviderTypeDropbox   ProviderType = "dropbox"
 )
 
-// MigrationJob represents a background job to migrate files from an external provider
+// MigrationJob represents a migration job from an external provider
 type MigrationJob struct {
-	gorm.Model
-	UserID   uint            `gorm:"index;not null" json:"user_id"`
+	BaseModel
+	UserID   uuid.UUID       `gorm:"type:uuid;not null;index" json:"user_id"`
 	Provider ProviderType    `gorm:"not null" json:"provider"`
-	Status   MigrationStatus `gorm:"default:'pending'" json:"status"`
+	Status   MigrationStatus `gorm:"default:pending" json:"status"`
 
 	// Progress tracking
 	TotalFiles     int   `gorm:"default:0" json:"total_files"`
@@ -41,16 +41,16 @@ type MigrationJob struct {
 	TotalBytes     int64 `gorm:"default:0" json:"total_bytes"`
 	ProcessedBytes int64 `gorm:"default:0" json:"processed_bytes"`
 
-	// Timing
+	// Timestamps
 	StartedAt   *time.Time `json:"started_at,omitempty"`
 	CompletedAt *time.Time `json:"completed_at,omitempty"`
 
 	// Error tracking
 	LastError string `json:"last_error,omitempty"`
 
-	// OAuth tokens (encrypted)
-	AccessToken  string `gorm:"type:text" json:"-"`
-	RefreshToken string `gorm:"type:text" json:"-"`
+	// OAuth tokens (encrypted in production)
+	AccessToken  string `json:"-"`
+	RefreshToken string `json:"-"`
 
 	// Relationships
 	User User `gorm:"foreignKey:UserID" json:"-"`
@@ -69,9 +69,7 @@ func (m *MigrationJob) Progress() float64 {
 	return float64(m.ProcessedFiles) / float64(m.TotalFiles) * 100
 }
 
-// IsComplete returns true if migration is finished (success or failure)
-func (m *MigrationJob) IsComplete() bool {
-	return m.Status == MigrationStatusCompleted ||
-		m.Status == MigrationStatusFailed ||
-		m.Status == MigrationStatusCancelled
+// GetID returns the job ID
+func (m *MigrationJob) GetID() uuid.UUID {
+	return m.ID
 }

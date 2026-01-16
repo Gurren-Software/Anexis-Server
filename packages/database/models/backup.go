@@ -3,10 +3,18 @@ package models
 import (
 	"time"
 
-	"gorm.io/gorm"
+	"github.com/google/uuid"
 )
 
-// BackupStatus represents the state of a backup job
+// BackupType represents the type of backup operation
+type BackupType string
+
+const (
+	BackupTypeExport BackupType = "export"
+	BackupTypeImport BackupType = "import"
+)
+
+// BackupStatus represents the status of a backup job
 type BackupStatus string
 
 const (
@@ -16,24 +24,16 @@ const (
 	BackupStatusFailed    BackupStatus = "failed"
 )
 
-// BackupType represents the type of backup operation
-type BackupType string
-
-const (
-	BackupTypeExport BackupType = "export" // Export data from server
-	BackupTypeImport BackupType = "import" // Import/restore data to server
-)
-
-// BackupJob represents a backup or restore operation
+// BackupJob represents a backup/restore job
 type BackupJob struct {
-	gorm.Model
-	UserID uint         `gorm:"index;not null" json:"user_id"`
+	BaseModel
+	UserID uuid.UUID    `gorm:"type:uuid;not null;index" json:"user_id"`
 	Type   BackupType   `gorm:"not null" json:"type"`
-	Status BackupStatus `gorm:"default:'pending'" json:"status"`
+	Status BackupStatus `gorm:"default:pending" json:"status"`
 
 	// Archive details
-	ArchiveKey  string `json:"archive_key,omitempty"`  // Storage key for backup archive
-	ArchiveSize int64  `json:"archive_size,omitempty"` // Size in bytes
+	ArchiveKey  string `json:"archive_key,omitempty"`
+	ArchiveSize int64  `json:"archive_size,omitempty"`
 
 	// Progress tracking
 	TotalFiles     int   `gorm:"default:0" json:"total_files"`
@@ -41,10 +41,10 @@ type BackupJob struct {
 	TotalBytes     int64 `gorm:"default:0" json:"total_bytes"`
 	ProcessedBytes int64 `gorm:"default:0" json:"processed_bytes"`
 
-	// Timing
+	// Timestamps
 	StartedAt   *time.Time `json:"started_at,omitempty"`
 	CompletedAt *time.Time `json:"completed_at,omitempty"`
-	ExpiresAt   *time.Time `json:"expires_at,omitempty"` // When backup download expires
+	ExpiresAt   *time.Time `json:"expires_at,omitempty"`
 
 	// Error tracking
 	LastError string `json:"last_error,omitempty"`
@@ -66,7 +66,7 @@ func (b *BackupJob) Progress() float64 {
 	return float64(b.ProcessedFiles) / float64(b.TotalFiles) * 100
 }
 
-// IsComplete returns true if backup is finished
-func (b *BackupJob) IsComplete() bool {
-	return b.Status == BackupStatusCompleted || b.Status == BackupStatusFailed
+// GetID returns the job ID
+func (b *BackupJob) GetID() uuid.UUID {
+	return b.ID
 }

@@ -21,7 +21,7 @@ var (
 
 // FileRepository interface for file operations
 type FileRepository interface {
-	GetUserFiles(userID uint) ([]models.File, error)
+	GetUserFiles(userID uuid.UUID) ([]models.File, error)
 }
 
 // Service handles backup business logic
@@ -43,7 +43,7 @@ func NewService(repo *Repository, fileRepo FileRepository, storage storage.Provi
 }
 
 // StartExport starts a new export backup job
-func (s *Service) StartExport(ctx context.Context, userID uint) (*models.BackupJob, error) {
+func (s *Service) StartExport(ctx context.Context, userID uuid.UUID) (*models.BackupJob, error) {
 	// Check for active job
 	activeJob, err := s.repo.GetActiveJob(userID)
 	if err != nil {
@@ -69,7 +69,7 @@ func (s *Service) StartExport(ctx context.Context, userID uint) (*models.BackupJ
 	return job, nil
 }
 
-func (s *Service) runExport(ctx context.Context, jobID, userID uint) {
+func (s *Service) runExport(ctx context.Context, jobID, userID uuid.UUID) {
 	job, err := s.repo.FindByID(jobID)
 	if err != nil || job == nil {
 		return
@@ -133,7 +133,7 @@ func (s *Service) runExport(ctx context.Context, jobID, userID uint) {
 	}
 
 	// Upload archive to storage
-	archiveKey := fmt.Sprintf("backups/%d/%s.zip", userID, uuid.New().String())
+	archiveKey := fmt.Sprintf("backups/%s/%s.zip", userID.String(), uuid.New().String())
 	archiveData := buf.Bytes()
 
 	if err := s.storage.Upload(ctx, archiveKey, bytes.NewReader(archiveData), int64(len(archiveData)), "application/zip"); err != nil {
@@ -155,7 +155,7 @@ func (s *Service) runExport(ctx context.Context, jobID, userID uint) {
 }
 
 // GetJob gets a backup job
-func (s *Service) GetJob(userID, jobID uint) (*models.BackupJob, error) {
+func (s *Service) GetJob(userID, jobID uuid.UUID) (*models.BackupJob, error) {
 	job, err := s.repo.FindByIDAndUser(jobID, userID)
 	if err != nil {
 		return nil, err
@@ -167,7 +167,7 @@ func (s *Service) GetJob(userID, jobID uint) (*models.BackupJob, error) {
 }
 
 // ListJobs lists user's backup jobs
-func (s *Service) ListJobs(userID uint, req *ListBackupsRequest) ([]models.BackupJob, int64, error) {
+func (s *Service) ListJobs(userID uuid.UUID, req *ListBackupsRequest) ([]models.BackupJob, int64, error) {
 	page := req.Page
 	if page < 1 {
 		page = 1
@@ -181,7 +181,7 @@ func (s *Service) ListJobs(userID uint, req *ListBackupsRequest) ([]models.Backu
 }
 
 // GetDownloadURL returns download URL for a backup
-func (s *Service) GetDownloadURL(ctx context.Context, userID, jobID uint) (string, error) {
+func (s *Service) GetDownloadURL(ctx context.Context, userID, jobID uuid.UUID) (string, error) {
 	job, err := s.repo.FindByIDAndUser(jobID, userID)
 	if err != nil {
 		return "", err

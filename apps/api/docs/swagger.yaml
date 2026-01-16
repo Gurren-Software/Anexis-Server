@@ -1,15 +1,15 @@
-basePath: /api/v1
+basePath: /
 definitions:
   auth.ChangePasswordRequest:
     properties:
+      current_password:
+        type: string
       new_password:
         minLength: 8
         type: string
-      old_password:
-        type: string
     required:
+    - current_password
     - new_password
-    - old_password
     type: object
   auth.LoginRequest:
     properties:
@@ -49,7 +49,7 @@ definitions:
       access_token:
         type: string
       expires_in:
-        description: seconds
+        description: seconds until expiration
         type: integer
       refresh_token:
         type: string
@@ -63,7 +63,7 @@ definitions:
       email:
         type: string
       id:
-        type: integer
+        type: string
       name:
         type: string
       storage_quota:
@@ -86,7 +86,7 @@ definitions:
       expires_at:
         type: string
       id:
-        type: integer
+        type: string
       last_error:
         type: string
       processed_files:
@@ -109,7 +109,7 @@ definitions:
         minLength: 1
         type: string
       parent_id:
-        type: integer
+        type: string
     required:
     - name
     type: object
@@ -128,13 +128,17 @@ definitions:
     type: object
   files.FileResponse:
     properties:
+      created_at:
+        type: string
       description:
         type: string
       id:
-        type: integer
+        type: string
       is_compressed:
         type: boolean
       is_encrypted:
+        type: boolean
+      is_folder:
         type: boolean
       mime_type:
         type: string
@@ -143,20 +147,16 @@ definitions:
       original_name:
         type: string
       parent_id:
-        type: integer
+        type: string
       size:
         type: integer
-      status:
-        type: string
-      tags:
-        type: string
-      uploaded_at:
+      updated_at:
         type: string
     type: object
   files.MoveRequest:
     properties:
-      target_parent_id:
-        type: integer
+      parent_id:
+        type: string
     type: object
   files.RenameRequest:
     properties:
@@ -181,7 +181,7 @@ definitions:
         description: seconds until expiration
         type: integer
       file_id:
-        type: integer
+        type: string
       max_downloads:
         type: integer
       name:
@@ -212,11 +212,11 @@ definitions:
       expires_at:
         type: string
       file_id:
-        type: integer
+        type: string
       file_name:
         type: string
       id:
-        type: integer
+        type: string
       last_accessed_at:
         type: string
       max_downloads:
@@ -253,7 +253,7 @@ definitions:
       failed_files:
         type: integer
       id:
-        type: integer
+        type: string
       last_error:
         type: string
       processed_bytes:
@@ -337,7 +337,7 @@ paths:
     post:
       consumes:
       - application/json
-      description: Authenticate user and return tokens
+      description: Authenticate user and get tokens
       parameters:
       - description: Login credentials
         in: body
@@ -357,16 +357,12 @@ paths:
                 data:
                   $ref: '#/definitions/auth.TokenResponse'
               type: object
-        "401":
-          description: Unauthorized
-          schema:
-            $ref: '#/definitions/response.Response'
-      summary: User login
+      summary: Login user
       tags:
       - auth
   /api/v1/auth/me:
     get:
-      description: Get authenticated user's profile
+      description: Get current authenticated user profile
       produces:
       - application/json
       responses:
@@ -379,10 +375,6 @@ paths:
                 data:
                   $ref: '#/definitions/auth.UserResponse'
               type: object
-        "401":
-          description: Unauthorized
-          schema:
-            $ref: '#/definitions/response.Response'
       security:
       - BearerAuth: []
       summary: Get current user
@@ -392,9 +384,9 @@ paths:
     put:
       consumes:
       - application/json
-      description: Change authenticated user's password
+      description: Change current user password
       parameters:
-      - description: Password change data
+      - description: Password change details
         in: body
         name: request
         required: true
@@ -405,14 +397,6 @@ paths:
       responses:
         "200":
           description: OK
-          schema:
-            $ref: '#/definitions/response.Response'
-        "400":
-          description: Bad Request
-          schema:
-            $ref: '#/definitions/response.Response'
-        "401":
-          description: Unauthorized
           schema:
             $ref: '#/definitions/response.Response'
       security:
@@ -444,20 +428,16 @@ paths:
                 data:
                   $ref: '#/definitions/auth.TokenResponse'
               type: object
-        "401":
-          description: Unauthorized
-          schema:
-            $ref: '#/definitions/response.Response'
-      summary: Refresh access token
+      summary: Refresh token
       tags:
       - auth
   /api/v1/auth/register:
     post:
       consumes:
       - application/json
-      description: Create a new user account
+      description: Register a new user account
       parameters:
-      - description: Registration data
+      - description: Registration details
         in: body
         name: request
         required: true
@@ -475,15 +455,7 @@ paths:
                 data:
                   $ref: '#/definitions/auth.UserResponse'
               type: object
-        "400":
-          description: Bad Request
-          schema:
-            $ref: '#/definitions/response.Response'
-        "422":
-          description: Unprocessable Entity
-          schema:
-            $ref: '#/definitions/response.Response'
-      summary: Register a new user
+      summary: Register new user
       tags:
       - auth
   /api/v1/backup:
@@ -528,7 +500,7 @@ paths:
         in: path
         name: id
         required: true
-        type: integer
+        type: string
       produces:
       - application/json
       responses:
@@ -554,7 +526,7 @@ paths:
         in: path
         name: id
         required: true
-        type: integer
+        type: string
       produces:
       - application/json
       responses:
@@ -589,13 +561,13 @@ paths:
       - backup
   /api/v1/files:
     get:
-      description: List user's files with optional filtering
+      description: List files with pagination
       parameters:
       - description: Parent folder ID
         in: query
         name: parent_id
-        type: integer
-      - description: Search query
+        type: string
+      - description: Search term
         in: query
         name: search
         type: string
@@ -634,29 +606,25 @@ paths:
         in: path
         name: id
         required: true
-        type: integer
+        type: string
       produces:
       - application/json
       responses:
         "204":
           description: No Content
-        "404":
-          description: Not Found
-          schema:
-            $ref: '#/definitions/response.Response'
       security:
       - BearerAuth: []
       summary: Delete file/folder
       tags:
       - files
     get:
-      description: Get metadata for a file
+      description: Get file metadata
       parameters:
       - description: File ID
         in: path
         name: id
         required: true
-        type: integer
+        type: string
       produces:
       - application/json
       responses:
@@ -669,10 +637,6 @@ paths:
                 data:
                   $ref: '#/definitions/files.FileResponse'
               type: object
-        "404":
-          description: Not Found
-          schema:
-            $ref: '#/definitions/response.Response'
       security:
       - BearerAuth: []
       summary: Get file details
@@ -680,13 +644,13 @@ paths:
       - files
   /api/v1/files/{id}/download:
     get:
-      description: Download a file from storage
+      description: Download a file
       parameters:
       - description: File ID
         in: path
         name: id
         required: true
-        type: integer
+        type: string
       produces:
       - application/octet-stream
       responses:
@@ -694,27 +658,23 @@ paths:
           description: OK
           schema:
             type: file
-        "404":
-          description: Not Found
-          schema:
-            $ref: '#/definitions/response.Response'
       security:
       - BearerAuth: []
-      summary: Download a file
+      summary: Download file
       tags:
       - files
   /api/v1/files/{id}/move:
     put:
       consumes:
       - application/json
-      description: Move a file or folder to another location
+      description: Move a file or folder
       parameters:
       - description: File ID
         in: path
         name: id
         required: true
-        type: integer
-      - description: Target location
+        type: string
+      - description: New parent
         in: body
         name: request
         required: true
@@ -747,7 +707,7 @@ paths:
         in: path
         name: id
         required: true
-        type: integer
+        type: string
       - description: New name
         in: body
         name: request
@@ -804,29 +764,25 @@ paths:
     post:
       consumes:
       - multipart/form-data
-      description: Upload a file to storage
+      description: Upload a new file
       parameters:
       - description: File to upload
         in: formData
         name: file
         required: true
         type: file
-      - description: Parent folder ID
-        in: formData
-        name: parent_id
-        type: integer
-      - description: File description
-        in: formData
-        name: description
-        type: string
-      - description: Comma-separated tags
-        in: formData
-        name: tags
-        type: string
       - description: Compress file
         in: formData
         name: compress
         type: boolean
+      - description: Parent folder ID
+        in: formData
+        name: parent_id
+        type: string
+      - description: File description
+        in: formData
+        name: description
+        type: string
       produces:
       - application/json
       responses:
@@ -839,17 +795,9 @@ paths:
                 data:
                   $ref: '#/definitions/files.FileResponse'
               type: object
-        "400":
-          description: Bad Request
-          schema:
-            $ref: '#/definitions/response.Response'
-        "401":
-          description: Unauthorized
-          schema:
-            $ref: '#/definitions/response.Response'
       security:
       - BearerAuth: []
-      summary: Upload a file
+      summary: Upload file
       tags:
       - files
   /api/v1/links:
@@ -859,7 +807,7 @@ paths:
       - description: Filter by file ID
         in: query
         name: file_id
-        type: integer
+        type: string
       - description: Filter by link type
         in: query
         name: type
@@ -922,7 +870,7 @@ paths:
         in: path
         name: id
         required: true
-        type: integer
+        type: string
       produces:
       - application/json
       responses:
@@ -942,7 +890,7 @@ paths:
         in: path
         name: id
         required: true
-        type: integer
+        type: string
       - description: Updated link details
         in: body
         name: request
@@ -1078,7 +1026,7 @@ paths:
         in: path
         name: id
         required: true
-        type: integer
+        type: string
       produces:
       - application/json
       responses:
@@ -1104,7 +1052,7 @@ paths:
         in: path
         name: id
         required: true
-        type: integer
+        type: string
       produces:
       - application/json
       responses:

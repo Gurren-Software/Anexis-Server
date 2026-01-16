@@ -6,17 +6,18 @@ import (
 
 	"github.com/Treefle-labs/anexis-server/packages/database/models"
 	"github.com/golang-jwt/jwt/v5"
+	"github.com/google/uuid"
 	"golang.org/x/crypto/bcrypt"
 )
 
 var (
-	ErrInvalidCredentials = errors.New("invalid email or password")
-	ErrEmailAlreadyExists = errors.New("email already registered")
+	ErrInvalidCredentials = errors.New("invalid credentials")
+	ErrUserExists         = errors.New("user already exists")
 	ErrUserNotFound       = errors.New("user not found")
-	ErrInvalidPassword    = errors.New("invalid password")
+	ErrInvalidToken       = errors.New("invalid token")
 )
 
-// Service handles authentication business logic
+// Service handles auth business logic
 type Service struct {
 	repo          *Repository
 	jwtSecret     string
@@ -32,15 +33,15 @@ func NewService(repo *Repository, jwtSecret string, expirationHours int) *Servic
 	}
 }
 
-// Register creates a new user account
+// Register registers a new user
 func (s *Service) Register(req *RegisterRequest) (*models.User, error) {
-	// Check if email already exists
-	exists, err := s.repo.EmailExists(req.Email)
+	// Check if user exists
+	existing, err := s.repo.FindByEmail(req.Email)
 	if err != nil {
 		return nil, err
 	}
-	if exists {
-		return nil, ErrEmailAlreadyExists
+	if existing != nil {
+		return nil, ErrUserExists
 	}
 
 	// Hash password
@@ -77,46 +78,41 @@ func (s *Service) Login(req *LoginRequest) (*TokenResponse, error) {
 		return nil, ErrInvalidCredentials
 	}
 
-	// Generate token
-	return s.generateTokenResponse(user)
+	return s.generateTokens(user)
 }
 
-// RefreshToken generates new tokens from a refresh token
+// RefreshToken refreshes access token using refresh token
 func (s *Service) RefreshToken(refreshToken string) (*TokenResponse, error) {
-	// Parse refresh token
-	claims := &jwt.RegisteredClaims{}
-	token, err := jwt.ParseWithClaims(refreshToken, claims, func(token *jwt.Token) (interface{}, error) {
-		return []byte(s.jwtSecret), nil
-	})
-
-	if err != nil || !token.Valid {
-		return nil, ErrInvalidCredentials
+	claims, err := s.validateToken(refreshToken)
+	if err != nil {
+		return nil, ErrInvalidToken
 	}
 
-	// Get user
-	userIDStr := claims.Subject
-	user, err := s.repo.FindByEmail(userIDStr)
+	userIDStr, ok := claims["user_id"].(string)
+	if !ok {
+		return nil, ErrInvalidToken
+	}
+
+	userID, err := uuid.Parse(userIDStr)
+	if err != nil {
+		return nil, ErrInvalidToken
+	}
+
+	user, err := s.repo.FindByID(userID)
 	if err != nil || user == nil {
 		return nil, ErrUserNotFound
 	}
 
-	return s.generateTokenResponse(user)
+	return s.generateTokens(user)
 }
 
-// GetUser returns user by ID
-func (s *Service) GetUser(userID uint) (*models.User, error) {
-	user, err := s.repo.FindByID(userID)
-	if err != nil {
-		return nil, err
-	}
-	if user == nil {
-		return nil, ErrUserNotFound
-	}
-	return user, nil
+// GetUserByID returns user by ID
+func (s *Service) GetUserByID(id uuid.UUID) (*models.User, error) {
+	return s.repo.FindByID(id)
 }
 
 // ChangePassword changes user password
-func (s *Service) ChangePassword(userID uint, req *ChangePasswordRequest) error {
+func (s *Service) ChangePassword(userID uuid.UUID, currentPassword, newPassword string) error {
 	user, err := s.repo.FindByID(userID)
 	if err != nil {
 		return err
@@ -125,13 +121,13 @@ func (s *Service) ChangePassword(userID uint, req *ChangePasswordRequest) error 
 		return ErrUserNotFound
 	}
 
-	// Verify old password
-	if err := bcrypt.CompareHashAndPassword([]byte(user.PasswordHash), []byte(req.OldPassword)); err != nil {
-		return ErrInvalidPassword
+	// Verify current password
+	if err := bcrypt.CompareHashAndPassword([]byte(user.PasswordHash), []byte(currentPassword)); err != nil {
+		return ErrInvalidCredentials
 	}
 
 	// Hash new password
-	hashedPassword, err := bcrypt.GenerateFromPassword([]byte(req.NewPassword), bcrypt.DefaultCost)
+	hashedPassword, err := bcrypt.GenerateFromPassword([]byte(newPassword), bcrypt.DefaultCost)
 	if err != nil {
 		return err
 	}
@@ -139,18 +135,17 @@ func (s *Service) ChangePassword(userID uint, req *ChangePasswordRequest) error 
 	return s.repo.UpdatePassword(userID, string(hashedPassword))
 }
 
-func (s *Service) generateTokenResponse(user *models.User) (*TokenResponse, error) {
+func (s *Service) generateTokens(user *models.User) (*TokenResponse, error) {
 	now := time.Now()
 	expiresAt := now.Add(s.jwtExpiration)
 
 	// Access token claims
-	email := user.Email
-
 	accessClaims := jwt.MapClaims{
-		"user_id": user.ID,
-		"email":   email,
+		"user_id": user.ID.String(),
+		"email":   user.Email,
 		"exp":     expiresAt.Unix(),
 		"iat":     now.Unix(),
+		"type":    "access",
 	}
 
 	accessToken := jwt.NewWithClaims(jwt.SigningMethodHS256, accessClaims)
@@ -160,11 +155,12 @@ func (s *Service) generateTokenResponse(user *models.User) (*TokenResponse, erro
 	}
 
 	// Refresh token (longer expiration)
-	refreshExpiresAt := now.Add(s.jwtExpiration * 7) // 7x access token expiration
+	refreshExpiresAt := now.Add(s.jwtExpiration * 7)
 	refreshClaims := jwt.MapClaims{
-		"sub": email,
-		"exp": refreshExpiresAt.Unix(),
-		"iat": now.Unix(),
+		"user_id": user.ID.String(),
+		"exp":     refreshExpiresAt.Unix(),
+		"iat":     now.Unix(),
+		"type":    "refresh",
 	}
 
 	refreshToken := jwt.NewWithClaims(jwt.SigningMethodHS256, refreshClaims)
@@ -176,9 +172,29 @@ func (s *Service) generateTokenResponse(user *models.User) (*TokenResponse, erro
 	return &TokenResponse{
 		AccessToken:  accessTokenString,
 		TokenType:    "Bearer",
-		ExpiresIn:    int(s.jwtExpiration.Seconds()),
+		ExpiresIn:    int64(s.jwtExpiration.Seconds()),
 		RefreshToken: refreshTokenString,
 	}, nil
+}
+
+func (s *Service) validateToken(tokenString string) (jwt.MapClaims, error) {
+	token, err := jwt.Parse(tokenString, func(token *jwt.Token) (interface{}, error) {
+		if _, ok := token.Method.(*jwt.SigningMethodHMAC); !ok {
+			return nil, ErrInvalidToken
+		}
+		return []byte(s.jwtSecret), nil
+	})
+
+	if err != nil || !token.Valid {
+		return nil, ErrInvalidToken
+	}
+
+	claims, ok := token.Claims.(jwt.MapClaims)
+	if !ok {
+		return nil, ErrInvalidToken
+	}
+
+	return claims, nil
 }
 
 // ToUserResponse converts user model to response DTO

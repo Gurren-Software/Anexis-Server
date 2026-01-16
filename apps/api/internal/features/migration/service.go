@@ -3,12 +3,14 @@ package migration
 import (
 	"context"
 	"errors"
+	"fmt"
 	"sync"
 	"time"
 
 	"github.com/Treefle-labs/anexis-server/apps/api/internal/features/migration/providers"
 	"github.com/Treefle-labs/anexis-server/apps/api/internal/infrastructure/storage"
 	"github.com/Treefle-labs/anexis-server/packages/database/models"
+	"github.com/google/uuid"
 )
 
 var (
@@ -21,7 +23,7 @@ var (
 type Service struct {
 	repo       *Repository
 	storage    storage.Provider
-	activeJobs map[uint]context.CancelFunc
+	activeJobs map[uuid.UUID]context.CancelFunc
 	mu         sync.RWMutex
 }
 
@@ -30,12 +32,12 @@ func NewService(repo *Repository, storage storage.Provider) *Service {
 	return &Service{
 		repo:       repo,
 		storage:    storage,
-		activeJobs: make(map[uint]context.CancelFunc),
+		activeJobs: make(map[uuid.UUID]context.CancelFunc),
 	}
 }
 
 // Start starts a new migration job
-func (s *Service) Start(ctx context.Context, userID uint, req *StartMigrationRequest) (*models.MigrationJob, error) {
+func (s *Service) Start(ctx context.Context, userID uuid.UUID, req *StartMigrationRequest) (*models.MigrationJob, error) {
 	// Check for active job
 	activeJob, err := s.repo.GetActiveJob(userID)
 	if err != nil {
@@ -64,7 +66,7 @@ func (s *Service) Start(ctx context.Context, userID uint, req *StartMigrationReq
 }
 
 // runMigration runs the migration job in background
-func (s *Service) runMigration(ctx context.Context, jobID, userID uint) {
+func (s *Service) runMigration(ctx context.Context, jobID, userID uuid.UUID) {
 	ctx, cancel := context.WithCancel(ctx)
 
 	s.mu.Lock()
@@ -123,7 +125,7 @@ func (s *Service) runMigration(ctx context.Context, jobID, userID uint) {
 		default:
 		}
 
-		err := s.processFile(ctx, provider, userID, job.ID, file)
+		err := s.processFile(ctx, provider, userID, jobID, file)
 		if err != nil {
 			failedFiles++
 			job.LastError = err.Error()
@@ -145,7 +147,7 @@ func (s *Service) runMigration(ctx context.Context, jobID, userID uint) {
 	s.repo.Update(job)
 }
 
-func (s *Service) processFile(ctx context.Context, provider providers.Provider, userID uint, jobID uint, file *providers.FileInfo) error {
+func (s *Service) processFile(ctx context.Context, provider providers.Provider, userID uuid.UUID, jobID uuid.UUID, file *providers.FileInfo) error {
 	// Download from provider
 	reader, err := provider.DownloadFile(ctx, file.ID)
 	if err != nil {
@@ -178,7 +180,7 @@ func (s *Service) getProvider(providerType models.ProviderType, accessToken, ref
 }
 
 // Cancel cancels a running migration job
-func (s *Service) Cancel(userID, jobID uint) error {
+func (s *Service) Cancel(userID, jobID uuid.UUID) error {
 	job, err := s.repo.FindByIDAndUser(jobID, userID)
 	if err != nil {
 		return err
@@ -200,7 +202,7 @@ func (s *Service) Cancel(userID, jobID uint) error {
 }
 
 // GetJob gets a migration job
-func (s *Service) GetJob(userID, jobID uint) (*models.MigrationJob, error) {
+func (s *Service) GetJob(userID, jobID uuid.UUID) (*models.MigrationJob, error) {
 	job, err := s.repo.FindByIDAndUser(jobID, userID)
 	if err != nil {
 		return nil, err
@@ -212,7 +214,7 @@ func (s *Service) GetJob(userID, jobID uint) (*models.MigrationJob, error) {
 }
 
 // ListJobs lists user's migration jobs
-func (s *Service) ListJobs(userID uint, req *ListMigrationsRequest) ([]models.MigrationJob, int64, error) {
+func (s *Service) ListJobs(userID uuid.UUID, req *ListMigrationsRequest) ([]models.MigrationJob, int64, error) {
 	page := req.Page
 	if page < 1 {
 		page = 1
@@ -251,6 +253,6 @@ func ToMigrationResponse(job *models.MigrationJob) *MigrationResponse {
 	return resp
 }
 
-func generateStorageKey(userID uint, filename string) string {
-	return "files/" + string(rune(userID)) + "/" + filename
+func generateStorageKey(userID uuid.UUID, filename string) string {
+	return fmt.Sprintf("files/%s/%s", userID.String(), filename)
 }
