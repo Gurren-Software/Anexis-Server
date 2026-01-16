@@ -1,0 +1,105 @@
+# Anexis Server Production Environment with Load Balancing
+version: '3.8'
+
+services:
+  # PostgreSQL Database (Primary)
+  postgres:
+    image: postgres:16-alpine
+    container_name: anexis-postgres-prod
+    environment:
+      POSTGRES_USER: ${DB_USER}
+      POSTGRES_PASSWORD: ${DB_PASSWORD}
+      POSTGRES_DB: ${DB_NAME}
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    deploy:
+      resources:
+        limits:
+          memory: 2G
+        reservations:
+          memory: 512M
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${DB_USER}"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    networks:
+      - anexis-internal
+    restart: always
+
+  # API Server instances (scaled for load balancing)
+  api:
+    build:
+      context: .
+      dockerfile: apps/api/Dockerfile
+    environment:
+      SERVER_HOST: 0.0.0.0
+      SERVER_PORT: 8080
+      ENVIRONMENT: production
+      DEBUG: "false"
+      
+      DB_HOST: postgres
+      DB_PORT: 5432
+      DB_USER: ${DB_USER}
+      DB_PASSWORD: ${DB_PASSWORD}
+      DB_NAME: ${DB_NAME}
+      DB_SSLMODE: disable
+      
+      JWT_SECRET: ${JWT_SECRET}
+      JWT_EXPIRATION_HOURS: 24
+      
+      B2_APPLICATION_KEY_ID: ${B2_APPLICATION_KEY_ID}
+      B2_APPLICATION_KEY: ${B2_APPLICATION_KEY}
+      B2_BUCKET_NAME: ${B2_BUCKET_NAME}
+    deploy:
+      mode: replicated
+      replicas: 3
+      resources:
+        limits:
+          memory: 512M
+        reservations:
+          memory: 128M
+      update_config:
+        parallelism: 1
+        delay: 10s
+        failure_action: rollback
+      restart_policy:
+        condition: on-failure
+        delay: 5s
+        max_attempts: 3
+    depends_on:
+      postgres:
+        condition: service_healthy
+    networks:
+      - anexis-internal
+    healthcheck:
+      test: ["CMD", "wget", "--no-verbose", "--tries=1", "--spider", "http://localhost:8080/health"]
+      interval: 15s
+      timeout: 5s
+      retries: 3
+
+  # Nginx Load Balancer
+  nginx:
+    image: nginx:alpine
+    container_name: anexis-nginx
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      - ./nginx/nginx.conf:/etc/nginx/nginx.conf:ro
+      - ./nginx/ssl:/etc/nginx/ssl:ro
+    depends_on:
+      - api
+    networks:
+      - anexis-internal
+      - anexis-external
+    restart: always
+
+volumes:
+  postgres_data:
+
+networks:
+  anexis-internal:
+    driver: bridge
+  anexis-external:
+    driver: bridge

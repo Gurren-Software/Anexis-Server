@@ -2,16 +2,20 @@ data "external_schema" "gorm" {
   program = [
     "go",
     "run",
-    "-mod=mod",
-    "./cmd/loader",
+    "./packages/database/cmd/loader",
   ]
+}
+
+locals {
+  db_url = "postgresql://${getenv("DB_USER")}:${getenv("DB_PASSWORD")}@${getenv("DB_HOST")}:${getenv("DB_PORT")}/${getenv("DB_NAME")}?sslmode=disable"
 }
 
 env "gorm" {
   src = data.external_schema.gorm.url
-  dev = "postgresql://doni:DoniLite13@localhost:5432/anexis"
+  dev = local.db_url
+  url = local.db_url
   migration {
-    dir = "file://migrations"
+    dir = "file://packages/database/migrations"
   }
   format {
     migrate {
