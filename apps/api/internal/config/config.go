@@ -14,15 +14,36 @@ type Config struct {
 	Environment string
 	Debug       bool
 
+	// Server mode: "saas" (default) or "standalone"
+	ServerMode string
+
 	// JWT settings
 	JWTSecret          string
 	JWTExpirationHours int
+
+	// API Key for standalone mode
+	APIKey string
+
+	// Storage provider: "b2", "s3", or "local" (default: "local" for standalone, "b2" for saas)
+	StorageProvider string
 
 	// Backblaze B2 settings
 	B2KeyID          string
 	B2ApplicationKey string
 	B2BucketName     string
 	B2BucketID       string
+
+	// S3-compatible storage settings
+	S3Endpoint       string
+	S3Region         string
+	S3Bucket         string
+	S3AccessKey      string
+	S3SecretKey      string
+	S3ForcePathStyle bool
+	S3BasePath       string
+
+	// Local storage settings
+	StorageLocalPath string
 
 	// Database settings (passed to database package)
 	DBHost     string
@@ -49,15 +70,36 @@ func Load() *Config {
 		Environment: getEnv("ENVIRONMENT", "development"),
 		Debug:       getEnvBool("DEBUG", true),
 
+		// Server mode
+		ServerMode: getEnv("SERVER_MODE", "saas"),
+
 		// JWT
 		JWTSecret:          getEnv("JWT_SECRET", "change-this-secret-in-production"),
 		JWTExpirationHours: getEnvInt("JWT_EXPIRATION_HOURS", 24),
+
+		// API Key for standalone mode
+		APIKey: getEnv("ANEXIS_API_KEY", ""),
+
+		// Storage provider
+		StorageProvider: getEnv("STORAGE_PROVIDER", "local"),
 
 		// Backblaze B2
 		B2KeyID:          getEnv("B2_APPLICATION_KEY_ID", ""),
 		B2ApplicationKey: getEnv("B2_APPLICATION_KEY", ""),
 		B2BucketName:     getEnv("B2_BUCKET_NAME", ""),
 		B2BucketID:       getEnv("B2_BUCKET_ID", ""),
+
+		// S3-compatible storage
+		S3Endpoint:       getEnv("S3_ENDPOINT", ""),
+		S3Region:         getEnv("S3_REGION", "us-east-1"),
+		S3Bucket:         getEnv("S3_BUCKET", ""),
+		S3AccessKey:      getEnv("S3_ACCESS_KEY", ""),
+		S3SecretKey:      getEnv("S3_SECRET_KEY", ""),
+		S3ForcePathStyle: getEnvBool("S3_FORCE_PATH_STYLE", false),
+		S3BasePath:       getEnv("S3_BASE_PATH", ""),
+
+		// Local storage
+		StorageLocalPath: getEnv("STORAGE_LOCAL_PATH", "./data/storage"),
 
 		// Database
 		DBHost:     getEnv("DB_HOST", "localhost"),
@@ -89,6 +131,49 @@ func (c *Config) IsProduction() bool {
 // ServerAddress returns the full server address
 func (c *Config) ServerAddress() string {
 	return c.ServerHost + ":" + c.ServerPort
+}
+
+// IsSaaSMode returns true if running in SaaS mode
+func (c *Config) IsSaaSMode() bool {
+	return c.ServerMode == "saas"
+}
+
+// IsStandaloneMode returns true if running in standalone mode
+func (c *Config) IsStandaloneMode() bool {
+	return c.ServerMode == "standalone"
+}
+
+// IsLocalStorage returns true if using local storage
+func (c *Config) IsLocalStorage() bool {
+	return c.StorageProvider == "local"
+}
+
+// IsB2Storage returns true if using Backblaze B2
+func (c *Config) IsB2Storage() bool {
+	return c.StorageProvider == "b2"
+}
+
+// IsS3Storage returns true if using S3-compatible storage
+func (c *Config) IsS3Storage() bool {
+	return c.StorageProvider == "s3"
+}
+
+// IsStorageConfigured returns true if storage is properly configured
+func (c *Config) IsStorageConfigured() bool {
+	switch c.StorageProvider {
+	case "local":
+		return c.StorageLocalPath != ""
+	case "b2":
+		return c.B2KeyID != "" && c.B2ApplicationKey != "" && c.B2BucketName != ""
+	case "s3":
+		return c.S3Endpoint != "" && c.S3Bucket != "" && c.S3AccessKey != "" && c.S3SecretKey != ""
+	}
+	return false
+}
+
+// NeedsAuth returns true if the server requires authentication
+func (c *Config) NeedsAuth() bool {
+	return c.IsSaaSMode() || c.APIKey != ""
 }
 
 func getEnv(key, fallback string) string {
