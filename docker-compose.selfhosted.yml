@@ -1,0 +1,70 @@
+# Anexis Server - Self-Hosted / Standalone Mode
+# This docker-compose is designed for self-hosting with local storage
+version: '3.8'
+
+services:
+  # Anexis API Server (self-hosted mode)
+  anexis:
+    image: anexis-server:latest
+    container_name: anexis-selfhosted
+    build:
+      context: .
+      dockerfile: apps/api/Dockerfile
+    volumes:
+      - anexis_data:/app/data  # Local storage data
+    environment:
+      # Server Mode
+      - SERVER_MODE=standalone
+      - SERVER_HOST=0.0.0.0
+      - SERVER_PORT=8080
+
+      # Storage (local by default for self-hosting)
+      - STORAGE_PROVIDER=local
+      - STORAGE_LOCAL_PATH=/app/data/storage
+
+      # Database (external PostgreSQL required)
+      - DB_HOST=postgres
+      - DB_PORT=5432
+      - DB_USER=anexis
+      - DB_PASSWORD=anexis_password
+      - DB_NAME=anexis
+      - DB_SSLMODE=disable
+
+      # Security (change these in production!)
+      - ANEXIS_API_KEY=your-secret-api-key-change-me
+      - JWT_SECRET=change-this-jwt-secret-in-production
+    ports:
+      - "8080:8080"
+    depends_on:
+      postgres:
+        condition: service_healthy
+    restart: unless-stopped
+    networks:
+      - anexis-network
+
+  # PostgreSQL Database
+  postgres:
+    image: postgres:16-alpine
+    container_name: anexis-postgres
+    environment:
+      POSTGRES_USER: anexis
+      POSTGRES_PASSWORD: anexis_password
+      POSTGRES_DB: anexis
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U anexis"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    restart: unless-stopped
+    networks:
+      - anexis-network
+
+volumes:
+  anexis_data:
+  postgres_data:
+
+networks:
+  anexis-network:
+    driver: bridge
