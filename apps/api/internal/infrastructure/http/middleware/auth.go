@@ -18,6 +18,13 @@ const (
 	APIKeyKey = "api_key"
 )
 
+var standaloneUserID = uuid.MustParse("00000000-0000-4000-8000-000000000001")
+
+// StandaloneUserID returns the stable single-user ID used in API key mode.
+func StandaloneUserID() uuid.UUID {
+	return standaloneUserID
+}
+
 // APIKeyAuth middleware validates API key for standalone mode
 func APIKeyAuth(apiKey string) gin.HandlerFunc {
 	return func(c *gin.Context) {
@@ -56,6 +63,7 @@ func APIKeyAuth(apiKey string) gin.HandlerFunc {
 		}
 
 		c.Set(APIKeyKey, apiKeyHeader)
+		c.Set(UserIDKey, standaloneUserID)
 		c.Next()
 	}
 }
@@ -76,6 +84,7 @@ func OptionalAPIKeyAuth(apiKey string) gin.HandlerFunc {
 
 		if apiKeyHeader == apiKey {
 			c.Set(APIKeyKey, apiKeyHeader)
+			c.Set(UserIDKey, standaloneUserID)
 		}
 
 		c.Next()

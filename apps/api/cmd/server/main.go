@@ -4,7 +4,9 @@ import (
 	"context"
 	"log"
 	"os"
+	"strings"
 
+	swaggerdocs "github.com/Gurren-Software/Anexis-Server/apps/api/docs"
 	"github.com/Gurren-Software/Anexis-Server/apps/api/internal/config"
 	"github.com/Gurren-Software/Anexis-Server/apps/api/internal/features/auth"
 	"github.com/Gurren-Software/Anexis-Server/apps/api/internal/features/backup"
@@ -14,12 +16,11 @@ import (
 	"github.com/Gurren-Software/Anexis-Server/apps/api/internal/infrastructure/http"
 	"github.com/Gurren-Software/Anexis-Server/apps/api/internal/infrastructure/http/middleware"
 	"github.com/Gurren-Software/Anexis-Server/packages/database"
+	"github.com/Gurren-Software/Anexis-Server/packages/database/models"
 	"github.com/gin-gonic/gin"
 	"github.com/joho/godotenv"
 	swaggerFiles "github.com/swaggo/files"
 	ginSwagger "github.com/swaggo/gin-swagger"
-
-	_ "github.com/Gurren-Software/Anexis-Server/apps/api/docs" // Swagger docs
 )
 
 // @title Anexis Cloud Storage API
@@ -63,6 +64,7 @@ func main() {
 
 	// Load configuration
 	cfg := config.Load()
+	configureSwaggerAuth(cfg.IsStandaloneMode())
 
 	// Print server mode info
 	if cfg.IsStandaloneMode() {
@@ -137,6 +139,12 @@ func main() {
 	migrationRepo := migration.NewRepository(db.DB)
 	backupRepo := backup.NewRepository(db.DB)
 
+	if cfg.IsStandaloneMode() {
+		if err := ensureStandaloneUser(authRepo); err != nil {
+			log.Fatalf("Failed to initialize standalone user: %v", err)
+		}
+	}
+
 	// Initialize services
 	authService := auth.NewService(authRepo, cfg.JWTSecret, cfg.JWTExpirationHours)
 	filesService := files.NewService(filesRepo, storageProvider, authRepo)
@@ -178,4 +186,36 @@ func init() {
 			}
 		}
 	}
+}
+
+func configureSwaggerAuth(standalone bool) {
+	if !standalone {
+		return
+	}
+
+	replacer := strings.NewReplacer(
+		`"BearerAuth": []`, `"APIKeyAuth": []`,
+		`"BearerAuth": {`, `"APIKeyAuth": {`,
+		`"description": "Enter your bearer token in the format: Bearer {token}"`, `"description": "Enter your API key for standalone mode"`,
+		`"name": "Authorization"`, `"name": "X-API-Key"`,
+	)
+	swaggerdocs.SwaggerInfo.SwaggerTemplate = replacer.Replace(swaggerdocs.SwaggerInfo.SwaggerTemplate)
+}
+
+func ensureStandaloneUser(repo *auth.Repository) error {
+	userID := middleware.StandaloneUserID()
+	user, err := repo.FindByID(userID)
+	if err != nil || user != nil {
+		return err
+	}
+
+	return repo.Create(&models.User{
+		BaseModel: models.BaseModel{
+			ID: userID,
+		},
+		Name:         "Standalone User",
+		Email:        "standalone@anexis.local",
+		PasswordHash: "standalone-api-key-auth",
+		StorageQuota: 5 * 1024 * 1024 * 1024,
+	})
 }

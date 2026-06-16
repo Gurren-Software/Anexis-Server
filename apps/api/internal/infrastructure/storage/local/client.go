@@ -20,12 +20,18 @@ type Config struct {
 }
 
 func NewClient(cfg *Config) (*Client, error) {
+	cwd, err := os.Getwd()
+
+	if err != nil {
+		return nil, fmt.Errorf("failed to retrieve the CWD: %w", err)
+	}
+
 	basePath := cfg.BasePath
 	if basePath == "" {
 		basePath = "./data/storage"
 	}
 
-	if err := os.MkdirAll(basePath, 0755); err != nil {
+	if err = os.MkdirAll(path.Join(cwd, basePath), 0755); err != nil {
 		return nil, fmt.Errorf("failed to create storage directory: %w", err)
 	}
 

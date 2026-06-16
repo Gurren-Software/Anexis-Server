@@ -69,7 +69,7 @@ SERVER_MODE=standalone
 ANEXIS_API_KEY=<secret>
 ```
 
-Protected routes should use:
+Protected routes should use this header:
 
 ```text
 X-API-Key: <secret>

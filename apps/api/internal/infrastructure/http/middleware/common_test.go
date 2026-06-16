@@ -29,6 +29,9 @@ func TestCORSAllowsConfiguredOrigin(t *testing.T) {
 	if got := recorder.Header().Get("Access-Control-Allow-Origin"); got != "https://app.example.com" {
 		t.Fatalf("expected allowed origin header, got %q", got)
 	}
+	if got := recorder.Header().Get("Access-Control-Allow-Headers"); !strings.Contains(got, "X-API-Key") {
+		t.Fatalf("expected X-API-Key to be allowed, got %q", got)
+	}
 }
 
 func TestCORSHandlesPreflight(t *testing.T) {
