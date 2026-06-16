@@ -1,14 +1,13 @@
 package backup
 
 import (
-	"github.com/Treefle-labs/anexis-server/apps/api/internal/infrastructure/http/middleware"
 	"github.com/gin-gonic/gin"
 )
 
 // RegisterRoutes registers backup routes
-func RegisterRoutes(router *gin.RouterGroup, handler *Handler, jwtSecret string) {
+func RegisterRoutes(router *gin.RouterGroup, handler *Handler, authMiddleware gin.HandlerFunc) {
 	backup := router.Group("/backup")
-	backup.Use(middleware.JWTAuth(jwtSecret))
+	backup.Use(authMiddleware)
 	{
 		backup.GET("", handler.List)
 		backup.POST("/export", handler.StartExport)

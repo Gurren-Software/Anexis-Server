@@ -33,6 +33,9 @@ WORKDIR /app
 # Copy binary from builder
 COPY --from=builder /app/api-server .
 
+# Create data directory for local storage
+RUN mkdir -p /app/data/storage /app/data/temp /app/data/uploads
+
 # Create non-root user
 RUN adduser -D -g '' appuser
 USER appuser
@@ -44,5 +47,9 @@ EXPOSE 8080
 HEALTHCHECK --interval=30s --timeout=3s --start-period=5s --retries=3 \
     CMD wget --no-verbose --tries=1 --spider http://localhost:8080/health || exit 1
 
-# Run the application
+# Run the application with default self-hosted settings
+ENV SERVER_MODE=standalone
+ENV STORAGE_PROVIDER=local
+ENV STORAGE_LOCAL_PATH=/app/data/storage
+
 CMD ["./api-server"]

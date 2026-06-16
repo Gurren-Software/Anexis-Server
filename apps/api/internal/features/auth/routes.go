@@ -1,20 +1,22 @@
 package auth
 
 import (
-	"github.com/Treefle-labs/anexis-server/apps/api/internal/infrastructure/http/middleware"
+	"github.com/Gurren-Software/Anexis-Server/apps/api/internal/infrastructure/http/middleware"
 	"github.com/gin-gonic/gin"
 )
 
 // RegisterRoutes registers auth routes
-func RegisterRoutes(router *gin.RouterGroup, handler *Handler, jwtSecret string) {
+func RegisterRoutes(router *gin.RouterGroup, handler *Handler, jwtSecret string, isStandalone bool) {
 	auth := router.Group("/auth")
 	{
-		// Public routes
-		auth.POST("/register", handler.Register)
-		auth.POST("/login", handler.Login)
-		auth.POST("/refresh", handler.RefreshToken)
+		if !isStandalone {
+			// Public routes - only in SaaS mode
+			auth.POST("/register", handler.Register)
+			auth.POST("/login", handler.Login)
+			auth.POST("/refresh", handler.RefreshToken)
+		}
 
-		// Protected routes
+		// Protected routes - always available but using different auth
 		protected := auth.Group("")
 		protected.Use(middleware.JWTAuth(jwtSecret))
 		{

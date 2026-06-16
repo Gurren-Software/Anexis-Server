@@ -1,12 +1,11 @@
 package links
 
 import (
-	"github.com/Treefle-labs/anexis-server/apps/api/internal/infrastructure/http/middleware"
 	"github.com/gin-gonic/gin"
 )
 
 // RegisterRoutes registers link routes
-func RegisterRoutes(router *gin.RouterGroup, handler *Handler, jwtSecret string) {
+func RegisterRoutes(router *gin.RouterGroup, handler *Handler, authMiddleware gin.HandlerFunc, optionalAuthMiddleware gin.HandlerFunc) {
 	links := router.Group("/links")
 	{
 		// Public access routes (no auth required)
@@ -15,7 +14,7 @@ func RegisterRoutes(router *gin.RouterGroup, handler *Handler, jwtSecret string)
 
 		// Protected management routes
 		protected := links.Group("")
-		protected.Use(middleware.JWTAuth(jwtSecret))
+		protected.Use(authMiddleware)
 		{
 			protected.GET("", handler.List)
 			protected.POST("", handler.Create)

@@ -1,0 +1,277 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+  --ifm-color-primary: #00d68f;
+  --ifm-color-primary-dark: #00c182;
+  --ifm-color-primary-darker: #00b877;
+  --ifm-color-primary-darkest: #00995e;
+  --ifm-color-primary-light: #1adf9c;
+  --ifm-color-primary-lighter: #33e1a6;
+  --ifm-color-primary-lightest: #66ecbe;
+
+  --ifm-background-color: #ffffff;
+  --ifm-background-surface-color: #f5faf7;
+  --ifm-navbar-background-color: #ffffff;
+  --ifm-font-color-base: #17211b;
+  --ifm-heading-color: #0d1b0f;
+  --ifm-code-font-size: 95%;
+  --ifm-code-background: #eef7f2;
+  --ifm-code-padding: 0.2rem 0.4rem;
+  --ifm-code-border-radius: 4px;
+  --ifm-link-color: #00a87a;
+  --ifm-link-hover-color: #00d68f;
+  --ifm-link-decoration: none;
+  --ifm-navbar-height: 4rem;
+  --ifm-navbar-shadow: 0 1px 0 rgba(0, 214, 143, 0.16);
+  --ifm-footer-background-color: #0d1b0f;
+  --ifm-footer-color: #b6c7bd;
+  --ifm-footer-link-color: #d9f5e7;
+  --ifm-footer-link-hover-color: #00d68f;
+  --ifm-footer-title-color: #00d68f;
+  --ifm-footer-logo-max-width: 8rem;
+  --docusaurus-highlighted-code-line-bg: rgba(0, 0, 0, 0.1);
+
+  --anexis-ink: #0d1b0f;
+  --anexis-muted: #496257;
+  --anexis-page: #ffffff;
+  --anexis-surface: #f5faf7;
+  --anexis-elevated: #ffffff;
+  --anexis-border: rgba(0, 168, 122, 0.18);
+  --anexis-primary: #00a87a;
+  --anexis-primary-soft: rgba(0, 214, 143, 0.12);
+  --anexis-primary-strong: #007f5d;
+  --anexis-code: #0d1b0f;
+  --anexis-shadow: 0 16px 40px rgba(13, 27, 15, 0.08);
+  --anexis-glow: 0 16px 40px rgba(0, 214, 143, 0.18);
+  --anexis-hero-gradient: linear-gradient(180deg, #f5faf7 0%, #ffffff 100%);
+  --anexis-band-gradient: linear-gradient(180deg, #f5faf7 0%, #eef7f2 100%);
+  --anexis-text-gradient: linear-gradient(135deg, #00c182 0%, #00a87a 55%, #007f5d 100%);
+}
+
+[data-theme='dark'] {
+  --ifm-color-primary: #00ff9d;
+  --ifm-color-primary-dark: #00e68c;
+  --ifm-color-primary-darker: #00cc7c;
+  --ifm-color-primary-darkest: #00995e;
+  --ifm-color-primary-light: #1affa8;
+  --ifm-color-primary-lighter: #33ffb3;
+  --ifm-color-primary-lightest: #66ffca;
+
+  --ifm-background-color: #0d1b0f;
+  --ifm-background-surface-color: #142419;
+  --ifm-navbar-background-color: #0d1b0f;
+  --ifm-font-color-base: #eaf7ef;
+  --ifm-heading-color: #ffffff;
+  --ifm-code-background: #1a2a1d;
+  --ifm-link-color: #00ff9d;
+  --ifm-link-hover-color: #33ffb3;
+  --ifm-navbar-shadow: 0 1px 0 rgba(0, 255, 157, 0.16);
+  --ifm-footer-background-color: #071208;
+  --ifm-footer-color: #b6c7bd;
+  --ifm-footer-link-color: #d9f5e7;
+  --ifm-footer-link-hover-color: #00ff9d;
+  --ifm-footer-title-color: #66ffca;
+  --ifm-footer-logo-max-width: 8rem;
+  --docusaurus-highlighted-code-line-bg: rgba(255, 255, 255, 0.05);
+
+  --anexis-ink: #ffffff;
+  --anexis-muted: #b6c7bd;
+  --anexis-page: #0d1b0f;
+  --anexis-surface: #142419;
+  --anexis-elevated: #102015;
+  --anexis-border: rgba(0, 255, 157, 0.16);
+  --anexis-primary: #00ff9d;
+  --anexis-primary-soft: rgba(0, 255, 157, 0.14);
+  --anexis-primary-strong: #66ffca;
+  --anexis-code: #071208;
+  --anexis-shadow: 0 18px 48px rgba(0, 0, 0, 0.3);
+  --anexis-glow: 0 18px 48px rgba(0, 255, 157, 0.18);
+  --anexis-hero-gradient: linear-gradient(180deg, #0d1b0f 0%, #142419 100%);
+  --anexis-band-gradient: linear-gradient(180deg, #142419 0%, #0d1b0f 100%);
+  --anexis-text-gradient: linear-gradient(135deg, #66ffca 0%, #00ff9d 55%, #00e68c 100%);
+}
+
+.navbar {
+  border-bottom: 1px solid var(--anexis-border);
+}
+
+.navbar__title {
+  font-weight: 700;
+}
+
+.navbar__link {
+  font-weight: 500;
+  transition: color 0.2s ease;
+}
+
+.navbar__link:hover {
+  color: var(--ifm-color-primary);
+}
+
+.navbar__logo img {
+  height: 2rem;
+  width: auto;
+}
+
+.button {
+  border-radius: 8px;
+  font-weight: 600;
+  padding: 0.75rem 1.5rem;
+  transition: all 0.2s ease;
+}
+
+.button.button--primary {
+  background: var(--anexis-text-gradient);
+  border-color: transparent;
+  color: #06140c;
+}
+
+.button.button--primary:hover {
+  box-shadow: var(--anexis-glow);
+  color: #06140c;
+  transform: translateY(-2px);
+}
+
+.button.button--secondary {
+  background: transparent;
+  border-color: var(--anexis-primary);
+  color: var(--anexis-primary);
+}
+
+.button.button--secondary:hover {
+  background: var(--anexis-primary-soft);
+  border-color: var(--anexis-primary);
+  color: var(--anexis-primary);
+}
+
+[data-theme='dark'] .button.button--secondary {
+  color: #66ffca;
+}
+
+[data-theme='dark'] .button.button--secondary:hover {
+  background: var(--anexis-primary);
+  color: #06140c;
+}
+
+.card {
+  border: 1px solid var(--anexis-border);
+  border-radius: 8px;
+  transition: all 0.3s ease;
+}
+
+[data-theme='dark'] .card {
+  background: var(--anexis-elevated);
+}
+
+.card:hover {
+  border-color: var(--ifm-color-primary);
+  box-shadow: var(--anexis-glow);
+  transform: translateY(-4px);
+}
+
+.menu {
+  font-weight: 500;
+}
+
+.menu__link {
+  border-radius: 6px;
+  padding: 0.5rem 0.75rem;
+}
+
+.menu__link--active {
+  background: var(--anexis-primary-soft);
+  color: var(--ifm-color-primary);
+}
+
+.prism-code {
+  border: 1px solid var(--anexis-border);
+  border-radius: 8px;
+}
+
+a {
+  transition: color 0.2s ease;
+}
+
+a:hover {
+  color: var(--ifm-color-primary);
+}
+
+.footer {
+  background: #071208;
+  border-top: 1px solid var(--anexis-border);
+  color: var(--ifm-footer-color);
+  padding-block: 3rem 2rem;
+}
+
+.footer.footer--dark {
+  --ifm-footer-background-color: #071208;
+  --ifm-footer-color: #b6c7bd;
+  --ifm-footer-link-color: #d9f5e7;
+  --ifm-footer-link-hover-color: var(--anexis-primary);
+  --ifm-footer-title-color: var(--anexis-primary-strong);
+}
+
+.footer__links {
+  margin-bottom: 2rem;
+}
+
+.footer__col {
+  margin-bottom: 1.5rem;
+}
+
+.footer__title {
+  color: var(--ifm-footer-title-color);
+  font-size: 0.85rem;
+  font-weight: 800;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+
+.footer__link-item {
+  color: var(--ifm-footer-link-color);
+  opacity: 0.86;
+}
+
+.footer__link-item:hover {
+  color: var(--ifm-footer-link-hover-color);
+  opacity: 1;
+  text-decoration: none;
+}
+
+.footer__bottom {
+  border-top: 1px solid rgba(0, 255, 157, 0.12);
+  padding-top: 1.5rem;
+}
+
+.footer__logo {
+  height: 3.5rem;
+  object-fit: contain;
+  width: auto;
+}
+
+.footer__copyright {
+  color: #94a89c;
+  font-size: 0.875rem;
+}
+
+html {
+  scroll-behavior: smooth;
+}
+
+::selection {
+  background: rgba(0, 214, 143, 0.3);
+  color: inherit;
+}
+
+@keyframes float {
+  0%,
+  100% {
+    transform: translateY(0);
+  }
+
+  50% {
+    transform: translateY(-10px);
+  }
+}

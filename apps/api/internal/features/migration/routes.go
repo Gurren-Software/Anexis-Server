@@ -1,14 +1,13 @@
 package migration
 
 import (
-	"github.com/Treefle-labs/anexis-server/apps/api/internal/infrastructure/http/middleware"
 	"github.com/gin-gonic/gin"
 )
 
 // RegisterRoutes registers migration routes
-func RegisterRoutes(router *gin.RouterGroup, handler *Handler, jwtSecret string) {
+func RegisterRoutes(router *gin.RouterGroup, handler *Handler, authMiddleware gin.HandlerFunc) {
 	migration := router.Group("/migration")
-	migration.Use(middleware.JWTAuth(jwtSecret))
+	migration.Use(authMiddleware)
 	{
 		migration.GET("", handler.List)
 		migration.POST("", handler.Start)

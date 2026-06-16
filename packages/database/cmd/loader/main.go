@@ -7,7 +7,7 @@ import (
 
 	"ariga.io/atlas-go-sdk/atlasexec"
 	"ariga.io/atlas-provider-gorm/gormschema"
-	"github.com/Treefle-labs/anexis-server/packages/database/models"
+	"github.com/Gurren-Software/Anexis-Server/packages/database/models"
 )
 
 func main() {
@@ -22,7 +22,10 @@ func main() {
 		fmt.Fprintf(os.Stderr, "failed to load gorm schema: %v\n", err)
 		os.Exit(1)
 	}
-	io.WriteString(os.Stdout, stmts)
+	if _, err := io.WriteString(os.Stdout, stmts); err != nil {
+		fmt.Fprintf(os.Stderr, "failed to write gorm schema: %v\n", err)
+		os.Exit(1)
+	}
 }
 
 // This is used by Atlas for schema inspection

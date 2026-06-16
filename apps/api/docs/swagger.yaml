@@ -323,7 +323,7 @@ definitions:
 host: localhost:8080
 info:
   contact:
-    email: support@treefle-labs.com
+    email: support@gurren-software.com
     name: API Support
   description: Cloud file storage server with Backblaze B2 integration
   license:

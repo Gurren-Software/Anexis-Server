@@ -1,4 +1,4 @@
-module github.com/Treefle-labs/anexis-server/packages/database
+module github.com/Gurren-Software/Anexis-Server/packages/database
 
 go 1.24
 

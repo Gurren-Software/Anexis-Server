@@ -1,14 +1,13 @@
 package files
 
 import (
-	"github.com/Treefle-labs/anexis-server/apps/api/internal/infrastructure/http/middleware"
 	"github.com/gin-gonic/gin"
 )
 
 // RegisterRoutes registers file routes
-func RegisterRoutes(router *gin.RouterGroup, handler *Handler, jwtSecret string) {
+func RegisterRoutes(router *gin.RouterGroup, handler *Handler, authMiddleware gin.HandlerFunc) {
 	files := router.Group("/files")
-	files.Use(middleware.JWTAuth(jwtSecret))
+	files.Use(authMiddleware)
 	{
 		files.GET("", handler.List)
 		files.POST("/upload", handler.Upload)

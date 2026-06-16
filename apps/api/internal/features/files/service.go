@@ -12,8 +12,8 @@ import (
 	"mime/multipart"
 	"time"
 
-	"github.com/Treefle-labs/anexis-server/apps/api/internal/infrastructure/storage"
-	"github.com/Treefle-labs/anexis-server/packages/database/models"
+	"github.com/Gurren-Software/Anexis-Server/apps/api/internal/infrastructure/storage"
+	"github.com/Gurren-Software/Anexis-Server/packages/database/models"
 	"github.com/google/uuid"
 )
 

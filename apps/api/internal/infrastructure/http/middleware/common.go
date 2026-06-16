@@ -1,6 +1,7 @@
 package middleware
 
 import (
+	"fmt"
 	"time"
 
 	"github.com/gin-gonic/gin"
@@ -72,13 +73,7 @@ func Logger() gin.HandlerFunc {
 		}
 
 		// You can replace this with structured logging (zerolog, zap, etc.)
-		gin.DefaultWriter.Write([]byte(
-			latency.String() + " | " +
-				clientIP + " | " +
-				method + " " +
-				path + " | " +
-				string(rune(statusCode)) + "\n",
-		))
+		_, _ = fmt.Fprintf(gin.DefaultWriter, "%s | %s | %s %s | %d\n", latency, clientIP, method, path, statusCode)
 	}
 }
 

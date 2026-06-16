@@ -54,7 +54,7 @@ anexis-server/
 
 ```bash
 # Clone the repository
-git clone https://github.com/Treefle-labs/anexis-server.git
+git clone https://github.com/Gurren-Software/Anexis-Server.git
 cd anexis-server
 
 # Copy environment template
@@ -185,5 +185,5 @@ This project is licensed under the MIT License - see the [LICENSE](LICENSE) file
 
 ## Support
 
-- 📧 Email: support@treefle-labs.com
-- 🐛 Issues: [GitHub Issues](https://github.com/Treefle-labs/anexis-server/issues)
+- 📧 Email: support@gurren-software.com
+- 🐛 Issues: [GitHub Issues](https://github.com/Gurren-Software/Anexis-Server/issues)

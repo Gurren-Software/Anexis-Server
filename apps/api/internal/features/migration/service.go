@@ -4,12 +4,13 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"log"
 	"sync"
 	"time"
 
-	"github.com/Treefle-labs/anexis-server/apps/api/internal/features/migration/providers"
-	"github.com/Treefle-labs/anexis-server/apps/api/internal/infrastructure/storage"
-	"github.com/Treefle-labs/anexis-server/packages/database/models"
+	"github.com/Gurren-Software/Anexis-Server/apps/api/internal/features/migration/providers"
+	"github.com/Gurren-Software/Anexis-Server/apps/api/internal/infrastructure/storage"
+	"github.com/Gurren-Software/Anexis-Server/packages/database/models"
 	"github.com/google/uuid"
 )
 
@@ -88,14 +89,14 @@ func (s *Service) runMigration(ctx context.Context, jobID, userID uuid.UUID) {
 	now := time.Now()
 	job.Status = models.MigrationStatusRunning
 	job.StartedAt = &now
-	s.repo.Update(job)
+	s.updateJob(job)
 
 	// Get provider client
 	provider, err := s.getProvider(job.Provider, job.AccessToken, job.RefreshToken)
 	if err != nil {
 		job.Status = models.MigrationStatusFailed
 		job.LastError = err.Error()
-		s.repo.Update(job)
+		s.updateJob(job)
 		return
 	}
 
@@ -104,12 +105,12 @@ func (s *Service) runMigration(ctx context.Context, jobID, userID uuid.UUID) {
 	if err != nil {
 		job.Status = models.MigrationStatusFailed
 		job.LastError = "Failed to list files: " + err.Error()
-		s.repo.Update(job)
+		s.updateJob(job)
 		return
 	}
 
 	job.TotalFiles = len(files)
-	s.repo.Update(job)
+	s.updateJob(job)
 
 	// Process each file
 	processedFiles := 0
@@ -120,7 +121,7 @@ func (s *Service) runMigration(ctx context.Context, jobID, userID uuid.UUID) {
 		select {
 		case <-ctx.Done():
 			job.Status = models.MigrationStatusCancelled
-			s.repo.Update(job)
+			s.updateJob(job)
 			return
 		default:
 		}
@@ -134,7 +135,9 @@ func (s *Service) runMigration(ctx context.Context, jobID, userID uuid.UUID) {
 			processedBytes += file.Size
 		}
 
-		s.repo.UpdateProgress(jobID, processedFiles, failedFiles, processedBytes)
+		if err := s.repo.UpdateProgress(jobID, processedFiles, failedFiles, processedBytes); err != nil {
+			log.Printf("failed to update migration job %s progress: %v", jobID, err)
+		}
 	}
 
 	// Complete job
@@ -144,7 +147,13 @@ func (s *Service) runMigration(ctx context.Context, jobID, userID uuid.UUID) {
 	job.FailedFiles = failedFiles
 	job.ProcessedBytes = processedBytes
 	job.CompletedAt = &completedAt
-	s.repo.Update(job)
+	s.updateJob(job)
+}
+
+func (s *Service) updateJob(job *models.MigrationJob) {
+	if err := s.repo.Update(job); err != nil {
+		log.Printf("failed to update migration job %s: %v", job.ID, err)
+	}
 }
 
 func (s *Service) processFile(ctx context.Context, provider providers.Provider, userID uuid.UUID, jobID uuid.UUID, file *providers.FileInfo) error {

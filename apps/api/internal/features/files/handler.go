@@ -4,9 +4,9 @@ import (
 	"errors"
 	"io"
 
-	"github.com/Treefle-labs/anexis-server/apps/api/internal/features/auth"
-	"github.com/Treefle-labs/anexis-server/apps/api/internal/infrastructure/http/middleware"
-	"github.com/Treefle-labs/anexis-server/apps/api/internal/infrastructure/http/response"
+	"github.com/Gurren-Software/Anexis-Server/apps/api/internal/features/auth"
+	"github.com/Gurren-Software/Anexis-Server/apps/api/internal/infrastructure/http/middleware"
+	"github.com/Gurren-Software/Anexis-Server/apps/api/internal/infrastructure/http/response"
 	"github.com/gin-gonic/gin"
 	"github.com/google/uuid"
 )
