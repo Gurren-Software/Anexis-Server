@@ -80,7 +80,7 @@ test-coverage: ## Run tests with coverage
 # Code quality
 lint: ## Run linter (requires golangci-lint)
 	@echo "Running linter..."
-	golangci-lint run ./...
+	golangci-lint run ./apps/api/... ./packages/database/...
 
 fmt: ## Format code
 	@echo "Formatting code..."

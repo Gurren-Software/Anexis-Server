@@ -23,7 +23,7 @@ Choose your installation method based on your needs.
 
 ```bash
 # Clone repository
-git clone https://github.com/Treefle-labs/anexis-server.git
+git clone https://github.com/Gurren-Software/Anexis-Server.git
 cd anexis-server
 
 # Start self-hosted
@@ -43,7 +43,7 @@ docker-compose up -d
 ### Pull Image
 
 ```bash
-docker pull ghcr.io/treefle-labs/anexis-server:latest
+docker pull ghcr.io/gurren-software/anexis-server:latest
 ```
 
 ### Run Container
@@ -56,7 +56,7 @@ docker run -d \
   -e STORAGE_PROVIDER=local \
   -e DB_HOST=postgres \
   -e ANEXIS_API_KEY=your-key \
-  ghcr.io/treefle-labs/anexis-server:latest
+  ghcr.io/gurren-software/anexis-server:latest
 ```
 
 ---
@@ -67,7 +67,7 @@ Download the pre-built binary from GitHub Releases:
 
 ```bash
 # Download latest release (amd64)
-curl -L https://github.com/Treefle-labs/anexis-server/releases/latest/download/anexis-server-linux-amd64 -o anexis-server
+curl -L https://github.com/Gurren-Software/Anexis-Server/releases/latest/download/anexis-server-linux-amd64 -o anexis-server
 chmod +x anexis-server
 
 # Run
@@ -91,7 +91,7 @@ Available architectures:
 
 ```bash
 # Clone
-git clone https://github.com/Treefle-labs/anexis-server.git
+git clone https://github.com/Gurren-Software/Anexis-Server.git
 cd anexis-server
 
 # Build

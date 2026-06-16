@@ -18,7 +18,7 @@ The fastest way to get started is using Docker Compose:
 
 ```bash
 # Clone the repository
-git clone https://github.com/Treefle-labs/anexis-server.git
+git clone https://github.com/Gurren-Software/Anexis-Server.git
 cd anexis-server
 
 # Start with docker-compose (development)
@@ -30,7 +30,7 @@ docker-compose up -d
 ### 1. Clone and Setup
 
 ```bash
-git clone https://github.com/Treefle-labs/anexis-server.git
+git clone https://github.com/Gurren-Software/Anexis-Server.git
 cd anexis-server
 ```
 

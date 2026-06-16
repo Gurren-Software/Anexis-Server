@@ -6,7 +6,7 @@ import (
 	"io"
 
 	"github.com/Backblaze/blazer/b2"
-	"github.com/Treefle-labs/anexis-server/apps/api/internal/infrastructure/storage"
+	"github.com/Gurren-Software/Anexis-Server/apps/api/internal/infrastructure/storage"
 )
 
 // Client implements the storage.Provider interface for Backblaze B2

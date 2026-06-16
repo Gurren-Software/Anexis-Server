@@ -5,21 +5,21 @@ import (
 	"log"
 	"os"
 
-	"github.com/Treefle-labs/anexis-server/apps/api/internal/config"
-	"github.com/Treefle-labs/anexis-server/apps/api/internal/features/auth"
-	"github.com/Treefle-labs/anexis-server/apps/api/internal/features/backup"
-	"github.com/Treefle-labs/anexis-server/apps/api/internal/features/files"
-	"github.com/Treefle-labs/anexis-server/apps/api/internal/features/links"
-	"github.com/Treefle-labs/anexis-server/apps/api/internal/features/migration"
-	"github.com/Treefle-labs/anexis-server/apps/api/internal/infrastructure/http"
-	"github.com/Treefle-labs/anexis-server/apps/api/internal/infrastructure/http/middleware"
-	"github.com/Treefle-labs/anexis-server/packages/database"
+	"github.com/Gurren-Software/Anexis-Server/apps/api/internal/config"
+	"github.com/Gurren-Software/Anexis-Server/apps/api/internal/features/auth"
+	"github.com/Gurren-Software/Anexis-Server/apps/api/internal/features/backup"
+	"github.com/Gurren-Software/Anexis-Server/apps/api/internal/features/files"
+	"github.com/Gurren-Software/Anexis-Server/apps/api/internal/features/links"
+	"github.com/Gurren-Software/Anexis-Server/apps/api/internal/features/migration"
+	"github.com/Gurren-Software/Anexis-Server/apps/api/internal/infrastructure/http"
+	"github.com/Gurren-Software/Anexis-Server/apps/api/internal/infrastructure/http/middleware"
+	"github.com/Gurren-Software/Anexis-Server/packages/database"
 	"github.com/gin-gonic/gin"
 	"github.com/joho/godotenv"
 	swaggerFiles "github.com/swaggo/files"
 	ginSwagger "github.com/swaggo/gin-swagger"
 
-	_ "github.com/Treefle-labs/anexis-server/apps/api/docs" // Swagger docs
+	_ "github.com/Gurren-Software/Anexis-Server/apps/api/docs" // Swagger docs
 )
 
 // @title Anexis Cloud Storage API
@@ -28,7 +28,7 @@ import (
 // @termsOfService http://swagger.io/terms/
 
 // @contact.name API Support
-// @contact.email support@treefle-labs.com
+// @contact.email support@gurren-software.com
 
 // @license.name MIT
 // @license.url https://opensource.org/licenses/MIT

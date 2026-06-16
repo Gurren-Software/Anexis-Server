@@ -7,10 +7,10 @@ const config: Config = {
   tagline: 'Open-source cloud file storage server',
   favicon: 'img/favicon.ico',
 
-  url: 'https://anexis-server.github.io',
-  baseUrl: '/',
-  organizationName: 'Treefle-labs',
-  projectName: 'anexis-server',
+  url: 'https://gurren-software.github.io',
+  baseUrl: '/Anexis-Server/',
+  organizationName: 'Gurren-Software',
+  projectName: 'Anexis-Server',
 
   onBrokenLinks: 'throw',
   onBrokenMarkdownLinks: 'warn',
@@ -26,7 +26,7 @@ const config: Config = {
       {
         docs: {
           sidebarPath: './sidebars.ts',
-          editUrl: 'https://github.com/Treefle-labs/anexis-server/tree/main/docs-site/',
+          editUrl: 'https://github.com/Gurren-Software/Anexis-Server/tree/main/docs-site/',
         },
         theme: {
           customCss: './src/css/custom.css',
@@ -36,7 +36,7 @@ const config: Config = {
   ],
 
   themeConfig: {
-    image: 'img/anexis-social-card.png',
+    image: 'img/anexis.png',
     colorMode: {
       defaultMode: 'dark',
       disableSwitch: false,
@@ -46,7 +46,7 @@ const config: Config = {
       title: 'Anexis Server',
       logo: {
         alt: 'Anexis Logo',
-        src: 'img/logo.svg',
+        src: 'img/anexis.png',
       },
       items: [
         {
@@ -68,7 +68,7 @@ const config: Config = {
           label: 'Deployment',
         },
         {
-          href: 'https://github.com/Treefle-labs/anexis-server',
+          href: 'https://github.com/Gurren-Software/Anexis-Server',
           label: 'GitHub',
           position: 'right',
         },
@@ -76,6 +76,11 @@ const config: Config = {
     },
     footer: {
       style: 'dark',
+      logo: {
+        alt: 'Anexis Logo',
+        src: 'img/anexis.png',
+        href: 'https://github.com/Gurren-Software/Anexis-Server',
+      },
       links: [
         {
           title: 'Documentation',
@@ -116,7 +121,7 @@ const config: Config = {
           items: [
             {
               label: 'GitHub',
-              href: 'https://github.com/Treefle-labs/anexis-server',
+              href: 'https://github.com/Gurren-Software/Anexis-Server',
             },
           ],
         },

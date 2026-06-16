@@ -1,7 +1,7 @@
 package auth
 
 import (
-	"github.com/Treefle-labs/anexis-server/apps/api/internal/infrastructure/http/middleware"
+	"github.com/Gurren-Software/Anexis-Server/apps/api/internal/infrastructure/http/middleware"
 	"github.com/gin-gonic/gin"
 )
 

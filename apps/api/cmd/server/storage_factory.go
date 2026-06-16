@@ -5,11 +5,11 @@ import (
 	"fmt"
 	"io"
 
-	"github.com/Treefle-labs/anexis-server/apps/api/internal/config"
-	"github.com/Treefle-labs/anexis-server/apps/api/internal/infrastructure/storage"
-	"github.com/Treefle-labs/anexis-server/apps/api/internal/infrastructure/storage/backblaze"
-	"github.com/Treefle-labs/anexis-server/apps/api/internal/infrastructure/storage/local"
-	"github.com/Treefle-labs/anexis-server/apps/api/internal/infrastructure/storage/s3"
+	"github.com/Gurren-Software/Anexis-Server/apps/api/internal/config"
+	"github.com/Gurren-Software/Anexis-Server/apps/api/internal/infrastructure/storage"
+	"github.com/Gurren-Software/Anexis-Server/apps/api/internal/infrastructure/storage/backblaze"
+	"github.com/Gurren-Software/Anexis-Server/apps/api/internal/infrastructure/storage/local"
+	"github.com/Gurren-Software/Anexis-Server/apps/api/internal/infrastructure/storage/s3"
 )
 
 // LocalStorageProvider provides additional methods for local storage

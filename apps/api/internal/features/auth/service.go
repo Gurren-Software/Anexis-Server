@@ -4,7 +4,7 @@ import (
 	"errors"
 	"time"
 
-	"github.com/Treefle-labs/anexis-server/packages/database/models"
+	"github.com/Gurren-Software/Anexis-Server/packages/database/models"
 	"github.com/golang-jwt/jwt/v5"
 	"github.com/google/uuid"
 	"golang.org/x/crypto/bcrypt"

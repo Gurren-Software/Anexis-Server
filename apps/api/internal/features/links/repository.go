@@ -3,7 +3,7 @@ package links
 import (
 	"errors"
 
-	"github.com/Treefle-labs/anexis-server/packages/database/models"
+	"github.com/Gurren-Software/Anexis-Server/packages/database/models"
 	"github.com/google/uuid"
 	"gorm.io/gorm"
 )

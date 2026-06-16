@@ -9,7 +9,7 @@ import (
 	"path"
 	"time"
 
-	"github.com/Treefle-labs/anexis-server/apps/api/internal/infrastructure/storage"
+	"github.com/Gurren-Software/Anexis-Server/apps/api/internal/infrastructure/storage"
 	"github.com/aws/aws-sdk-go-v2/aws"
 	"github.com/aws/aws-sdk-go-v2/config"
 	"github.com/aws/aws-sdk-go-v2/credentials"

@@ -7,7 +7,7 @@ import (
 
 	"ariga.io/atlas-go-sdk/atlasexec"
 	"ariga.io/atlas-provider-gorm/gormschema"
-	"github.com/Treefle-labs/anexis-server/packages/database/models"
+	"github.com/Gurren-Software/Anexis-Server/packages/database/models"
 )
 
 func main() {

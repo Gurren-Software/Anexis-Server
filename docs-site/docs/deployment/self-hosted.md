@@ -28,7 +28,7 @@ Deploy Anexis Server for personal or organizational self-hosting.
 
 ```bash
 # Clone repository
-git clone https://github.com/Treefle-labs/anexis-server.git
+git clone https://github.com/Gurren-Software/Anexis-Server.git
 cd anexis-server
 
 # Start self-hosted stack

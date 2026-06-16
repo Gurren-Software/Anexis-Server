@@ -17,13 +17,13 @@ Deploy Anexis Server using Docker.
 Pull the latest image from GitHub Container Registry:
 
 ```bash
-docker pull ghcr.io/treefle-labs/anexis-server:latest
+docker pull ghcr.io/gurren-software/anexis-server:latest
 ```
 
 Or use a specific version:
 
 ```bash
-docker pull ghcr.io/treefle-labs/anexis-server:v1.0.0
+docker pull ghcr.io/gurren-software/anexis-server:v1.0.0
 ```
 
 ## Build Image (Optional)
@@ -32,7 +32,7 @@ If you want to build yourself:
 
 ```bash
 # Clone and build
-git clone https://github.com/Treefle-labs/anexis-server.git
+git clone https://github.com/Gurren-Software/Anexis-Server.git
 cd anexis-server
 
 # Build the image

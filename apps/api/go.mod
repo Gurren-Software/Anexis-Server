@@ -1,10 +1,10 @@
-module github.com/Treefle-labs/anexis-server/apps/api
+module github.com/Gurren-Software/Anexis-Server/apps/api
 
 go 1.24
 
 require (
 	github.com/Backblaze/blazer v0.7.2
-	github.com/Treefle-labs/anexis-server/packages/database v0.0.0
+	github.com/Gurren-Software/Anexis-Server/packages/database v0.0.0
 	github.com/aws/aws-sdk-go-v2 v1.41.5
 	github.com/aws/aws-sdk-go-v2/config v1.32.13
 	github.com/aws/aws-sdk-go-v2/credentials v1.19.13
@@ -87,4 +87,4 @@ require (
 	gorm.io/driver/postgres v1.5.11 // indirect
 )
 
-replace github.com/Treefle-labs/anexis-server/packages/database => ../../packages/database
+replace github.com/Gurren-Software/Anexis-Server/packages/database => ../../packages/database
