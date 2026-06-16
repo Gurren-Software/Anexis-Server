@@ -5,20 +5,34 @@ on:
     tags:
       - 'v*'
   workflow_dispatch:
+    inputs:
+      version:
+        description: 'Release tag to build, for example v0.1.0'
+        required: true
+        type: string
 
 jobs:
   release:
     runs-on: ubuntu-latest
     permissions:
       contents: write
+    outputs:
+      tag: ${{ steps.get_tag.outputs.TAG }}
     
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
 
+      - name: Get tag
+        id: get_tag
+        run: echo "TAG=${RELEASE_TAG}" >> "$GITHUB_OUTPUT"
+        env:
+          RELEASE_TAG: ${{ github.event.inputs.version || github.ref_name }}
+
       - name: Create Release
         uses: softprops/action-gh-release@v2
         with:
+          tag_name: ${{ steps.get_tag.outputs.TAG }}
           generate_release_notes: true
           draft: false
           prerelease: false
@@ -48,22 +62,15 @@ jobs:
         with:
           go-version: '1.24'
 
-      - name: Get tag
-        id: get_tag
-        run: echo "TAG=${GITHUB_REF#refs/tags/}" >> $GITHUB_OUTPUT
-
       - name: Build binary
         run: |
           cd apps/api
           GOOS=${{ matrix.platform }} GOARCH=${{ matrix.arch }} CGO_ENABLED=0 go build -a -installsuffix cgo -o anexis-server-${{ matrix.platform }}-${{ matrix.arch }} ./cmd/server
 
       - name: Upload Release Asset
-        uses: softprops/upload-gh-release-asset@v1
-        with:
-          upload_url: ${{ needs.release.outputs.upload_url }}
-          asset_path: apps/api/anexis-server-${{ matrix.platform }}-${{ matrix.arch }}
-          asset_content_type: application/octet-stream
-          overwrite: true
+        run: gh release upload "${{ needs.release.outputs.tag }}" "apps/api/anexis-server-${{ matrix.platform }}-${{ matrix.arch }}" --clobber
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
   build-docker:
     needs: release
@@ -90,9 +97,10 @@ jobs:
         id: meta
         uses: docker/metadata-action@v5
         with:
-          images: ghcr.io/${{ github.repository }}/anexis-server
+          images: ghcr.io/gurren-software/anexis-server
           tags: |
-            type=ref,event=tag
+            type=raw,value=${{ needs.release.outputs.tag }}
+            type=raw,value=latest,enable=${{ startsWith(needs.release.outputs.tag, 'v') }}
 
       - name: Build and push
         uses: docker/build-push-action@v5
