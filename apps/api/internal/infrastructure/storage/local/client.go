@@ -7,7 +7,6 @@ import (
 	"os"
 	"path"
 	"path/filepath"
-	"time"
 
 	"github.com/Gurren-Software/Anexis-Server/apps/api/internal/infrastructure/storage"
 )
@@ -242,16 +241,3 @@ func (c *Client) ServeFile(key string) (io.ReadCloser, int64, error) {
 func (c *Client) GetBasePath() string {
 	return c.basePath
 }
-
-type fileInfo struct {
-	stat  os.FileInfo
-	key   string
-	isDir bool
-}
-
-func (fi fileInfo) Name() string       { return fi.stat.Name() }
-func (fi fileInfo) Size() int64        { return fi.stat.Size() }
-func (fi fileInfo) IsDir() bool        { return fi.isDir }
-func (fi fileInfo) Mode() os.FileMode  { return fi.stat.Mode() }
-func (fi fileInfo) ModTime() time.Time { return fi.stat.ModTime() }
-func (fi fileInfo) Sys() interface{}   { return fi.stat.Sys() }

@@ -36,8 +36,23 @@ jobs:
 
       - name: Run tests
         run: |
-          cd apps/api
-          go test -v -race -coverprofile=coverage.out ./...
+          go test -v -race ./apps/api/... ./packages/database/...
+          go test -coverprofile=apps-api.coverage.out \
+            ./apps/api/internal/config \
+            ./apps/api/internal/features/auth \
+            ./apps/api/internal/features/backup \
+            ./apps/api/internal/features/files \
+            ./apps/api/internal/features/links \
+            ./apps/api/internal/features/migration \
+            ./apps/api/internal/features/migration/providers \
+            ./apps/api/internal/infrastructure/http \
+            ./apps/api/internal/infrastructure/http/middleware \
+            ./apps/api/internal/infrastructure/http/response \
+            ./apps/api/internal/infrastructure/storage/local \
+            ./apps/api/internal/infrastructure/storage/s3
+          go test -coverprofile=packages-database.coverage.out \
+            ./packages/database \
+            ./packages/database/models
         env:
           DB_HOST: localhost
           DB_PORT: 5432
@@ -53,7 +68,9 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: coverage
-          path: apps/api/coverage.out
+          path: |
+            apps-api.coverage.out
+            packages-database.coverage.out
 
   lint:
     runs-on: ubuntu-latest

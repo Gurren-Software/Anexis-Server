@@ -7,6 +7,7 @@ import (
 	"errors"
 	"fmt"
 	"io"
+	"log"
 	"time"
 
 	"github.com/Gurren-Software/Anexis-Server/apps/api/internal/infrastructure/storage"
@@ -78,19 +79,19 @@ func (s *Service) runExport(ctx context.Context, jobID, userID uuid.UUID) {
 	now := time.Now()
 	job.Status = models.BackupStatusRunning
 	job.StartedAt = &now
-	s.repo.Update(job)
+	s.updateJob(job)
 
 	// Get all user files
 	files, err := s.fileRepo.GetUserFiles(userID)
 	if err != nil {
 		job.Status = models.BackupStatusFailed
 		job.LastError = err.Error()
-		s.repo.Update(job)
+		s.updateJob(job)
 		return
 	}
 
 	job.TotalFiles = len(files)
-	s.repo.Update(job)
+	s.updateJob(job)
 
 	// Create ZIP archive
 	var buf bytes.Buffer
@@ -122,13 +123,13 @@ func (s *Service) runExport(ctx context.Context, jobID, userID uuid.UUID) {
 
 		processedFiles++
 		job.ProcessedFiles = processedFiles
-		s.repo.Update(job)
+		s.updateJob(job)
 	}
 
 	if err := zipWriter.Close(); err != nil {
 		job.Status = models.BackupStatusFailed
 		job.LastError = err.Error()
-		s.repo.Update(job)
+		s.updateJob(job)
 		return
 	}
 
@@ -139,7 +140,7 @@ func (s *Service) runExport(ctx context.Context, jobID, userID uuid.UUID) {
 	if err := s.storage.Upload(ctx, archiveKey, bytes.NewReader(archiveData), int64(len(archiveData)), "application/zip"); err != nil {
 		job.Status = models.BackupStatusFailed
 		job.LastError = err.Error()
-		s.repo.Update(job)
+		s.updateJob(job)
 		return
 	}
 
@@ -151,7 +152,13 @@ func (s *Service) runExport(ctx context.Context, jobID, userID uuid.UUID) {
 	job.ArchiveSize = int64(len(archiveData))
 	job.CompletedAt = &completedAt
 	job.ExpiresAt = &expiresAt
-	s.repo.Update(job)
+	s.updateJob(job)
+}
+
+func (s *Service) updateJob(job *models.BackupJob) {
+	if err := s.repo.Update(job); err != nil {
+		log.Printf("failed to update backup job %s: %v", job.ID, err)
+	}
 }
 
 // GetJob gets a backup job

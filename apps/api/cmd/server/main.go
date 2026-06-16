@@ -173,7 +173,9 @@ func init() {
 	dirs := []string{"./data/temp", "./data/uploads"}
 	for _, dir := range dirs {
 		if _, err := os.Stat(dir); os.IsNotExist(err) {
-			os.MkdirAll(dir, os.ModePerm)
+			if err := os.MkdirAll(dir, os.ModePerm); err != nil {
+				log.Printf("failed to create directory %s: %v", dir, err)
+			}
 		}
 	}
 }

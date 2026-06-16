@@ -73,9 +73,25 @@ test: ## Run all tests
 
 test-coverage: ## Run tests with coverage
 	@echo "Running tests with coverage..."
-	cd apps/api && go test -coverprofile=coverage.out ./...
-	cd apps/api && go tool cover -html=coverage.out -o coverage.html
-	@echo "Coverage report: apps/api/coverage.html"
+	go test -coverprofile=apps-api.coverage.out \
+		./apps/api/internal/config \
+		./apps/api/internal/features/auth \
+		./apps/api/internal/features/backup \
+		./apps/api/internal/features/files \
+		./apps/api/internal/features/links \
+		./apps/api/internal/features/migration \
+		./apps/api/internal/features/migration/providers \
+		./apps/api/internal/infrastructure/http \
+		./apps/api/internal/infrastructure/http/middleware \
+		./apps/api/internal/infrastructure/http/response \
+		./apps/api/internal/infrastructure/storage/local \
+		./apps/api/internal/infrastructure/storage/s3
+	go test -coverprofile=packages-database.coverage.out \
+		./packages/database \
+		./packages/database/models
+	go tool cover -html=apps-api.coverage.out -o apps-api.coverage.html
+	go tool cover -html=packages-database.coverage.out -o packages-database.coverage.html
+	@echo "Coverage reports: apps-api.coverage.html, packages-database.coverage.html"
 
 # Code quality
 lint: ## Run linter (requires golangci-lint)
